@@ -1,0 +1,6 @@
+Useful links:
+GitHub:
+* Intro to GitHub - https://guides.github.com/activities/hello-world
+
+Parts:
+* Pretty much all electrical components - digikey.com

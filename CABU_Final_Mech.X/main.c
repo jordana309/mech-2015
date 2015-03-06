@@ -10,6 +10,7 @@
  *      b) Directives for coding
  *      c) Microprocessor configuration
  *   1) Initial configuration
+ *      0) Global variables
  *      a) Pin configuration
  *      b) PWM configuration
  *      c) A/D configuration
@@ -53,6 +54,7 @@
 #include <stdlib.h>
 //#include<p24F16KA301.h> // Maintain as place-holder, in case we need to downgrade
 #include <p24FJ128GA202.h>
+#include <PIC24F_plib.h>
 
 /*-------------------------------------------------------------------------------------------------
  0b) Directives for coding - Set up a compiler variable, so we can include other code that is
@@ -81,8 +83,11 @@ _CONFIG2(FNOSC_FRCPLL); // 8 MHz w/ PLL (phase-locked loop), allowing increased 
 //_CONFIG4();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// 1) Initial configuration - Configures pins, periferals
+// 1) Initial configuration - Configures pins, peripherals
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+volatile int processingTask = 0;
+
 
 /*-------------------------------------------------------------------------------------------------
  1a) Pin configuration - Specifies which pins are used for what. A pin inventory:
@@ -113,15 +118,23 @@ _CONFIG2(FNOSC_FRCPLL); // 8 MHz w/ PLL (phase-locked loop), allowing increased 
 // TODO: Put pin configuration here
 void PinConf()
 {
-    TRISA = 0x0;    // output for all port A (0000), 4 A bits
+    //TRISA = 0x0;    // output for all port A (0000), 4 A bits
     TRISB = 0x0000; // output for all port B (0000 0000 0000 0000), 16 B bits
-    ANSA = 0x0; // turn off analog input on all pins, port A
-    ANSB = 0x0; // turn off analog input on all pins, port B
-    // Pin 23: OC1, (RB12), to be used for PWM to motors
+    //ANSA = 0x0; // turn off analog input on all pins, port A
+    ANSB = 0x0000; // turn off analog input on all pins, port B
+    // Pin 23: OC1, (RP12), to be used for PWM to motors
     // TODO: Configure OC1 on pin 23
-    // Pin 24: Digital Out, direction of right wheel
-    // Pin 25: Digital Out, direction of left wheel
-    // Pin 26: Digital Out, "sleep" mode on motor driver chips
+    // Pin 24: Digital Out, direction of right wheel (RB13)
+    // Pin 25: Digital Out, direction of left wheel  (RB14)
+    // Pin 26: Digital Out, "sleep" mode on motor driver chips (RB15)
+
+    _RP12R = 13;                //Assign RP12 (pin 23) to function 13 (OC1)
+
+    //_RB13 = 1;                  //Initialize Wheel2 Dir to 0
+    //_RB14 = 1;                  //Initialize Wheel1 Dir to 0
+    _RB15 = 1;                  //Initialize Sleep to 1 (turns off sleep mode)
+    _RB3 = 1;                   //Set Pin 22 to off -> send this to M0 for full step
+
 }
 
 
@@ -145,7 +158,7 @@ void PWMConf()
     // PWM period = [Value+1]*Tcy*Prescaler value
     // On time (duty cycle) in ticks of the period timer. I'm using T2 as my ticker, so this is
     // ticks of PR2. Duity cycle is OC1R/PR2.
-    OC1R = 2000;
+    OC1R = 0;       //Begin with 0 duty cycle (no steps sent to stepper motors)
 
     // TODO: Set up the timer better
     // Set up the timer
@@ -154,6 +167,16 @@ void PWMConf()
     TMR2 = 0; // Timer set to 0
     T2CONbits.TON = 1; // Timer is on
     PR2 =  3999; // Timer period
+
+    //Set up timer for determining how long to perform operations
+    T1CONbits.TON = 1;      //Don't turn Timer 1 on until we need it
+    T1CONbits.TCKPS = 0b11;    //Prescale by 256
+    T1CONbits.TCS = 0;      //Use internal clock
+
+    _T1IE = 0;          //Enable T1 Interrupt
+    _T1IF = 0;          //Disable T1 Interrupt Flag
+
+
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -169,55 +192,55 @@ void ADConf(void)
 
     // First, choose pins using AD1CHS register (22-5)
 
-    _CH0NA = 0b000;     // Choose GND (pin 20) as negative input
+    //_CH0NA = 0b000;     // Choose GND (pin 20) as negative input
     //_CH0SA = 0b01100; // Choose AN12 (pin 15) as positive input. Less reliable
                         // than using AD1CSSL/H, so we don't use it
 
     // AD1CON1 register (22-1)
-    _ADON = 1;      // AD1CON1<15> -- A/D on?
+    //_ADON = 1;      // AD1CON1<15> -- A/D on?
                     // 1=On
-    _ADSIDL = 0;    // AD1CON1<13> -- A/D stops while in idle mode?
+    //_ADSIDL = 0;    // AD1CON1<13> -- A/D stops while in idle mode?
                     // 0=yes
-    _MODE12 = 1;    // AD1CON1<10> -- 12-bit or 10-bit?
+    //_MODE12 = 1;    // AD1CON1<10> -- 12-bit or 10-bit?
                     // 1=12
-    _FORM = 0b10;   // AD1CON1<9:8> -- Output format
+    //_FORM = 0b10;   // AD1CON1<9:8> -- Output format
                     // 00=Abs decimal, unsigned
                     // 10=Abs fractional, unsigned
-    _SSRC = 0b0111; // AD1CON1<7:4> -- Sample clock source select
+    //_SSRC = 0b0111; // AD1CON1<7:4> -- Sample clock source select
                     // 0111=Auto conversion, internal counter
-    _ASAM = 1;    // AD1CON1<2> -- When to sample
+    //_ASAM = 1;    // AD1CON1<2> -- When to sample
                     // 1=Continuous auto sampling
 
     // AD1CSSL/H registers (22-9 and 22-8)
-    AD1CSSL = 0;    // AD1CSSL<15:0> -- Select lower channels to scan
+    //AD1CSSL = 0;    // AD1CSSL<15:0> -- Select lower channels to scan
                     // 0=all off, since we'll turn on the ones we want individually
-    AD1CSSH = 0;    // AD1CSSH<15:0> -- Select upper channels to scan
+    //AD1CSSH = 0;    // AD1CSSH<15:0> -- Select upper channels to scan
                     // 0=all off; we'll turn on the ones we want individually
     //_CSS12 = 1;     // Turn on AN12 (Pin 15) to sample
 
     // AD1CON2 register (22-2)
-    _PVCFG = 0;         // AD1CON2<15:14> -- Set positive voltage reference
+    //_PVCFG = 0;         // AD1CON2<15:14> -- Set positive voltage reference
                         // 0=Use VDD as positive ref voltage
     //_NVCFG = 0;         // AD1CON2<13> -- Set negative voltage reference
                         // 0=Use VSS as negative ref voltage
-    _BUFREGEN = 1;      // AD1CON2<11> -- A/D buffer register enable?
+    //_BUFREGEN = 1;      // AD1CON2<11> -- A/D buffer register enable?
                         // 1=enabled. Results stored using channel indexed
                         // mode -- AN1 result is stored in ADC1BUF1, AN2 result
                         // is stored in ADC1BUF2, etc.
-    _CSCNA = 1;         // AD1CON2<10> -- Scan inputs?
+    //_CSCNA = 1;         // AD1CON2<10> -- Scan inputs?
                         // 1=Scans inputs specified in AD1CSSx registers instead
                         // of using channels specified by CH0SA bits in AD1CHS
-    _ALTS = 0;          // AD1CON2<0> -- Alternate input sample
+    //_ALTS = 0;          // AD1CON2<0> -- Alternate input sample
                         // 0=Sample MUXA only (*not from MUXB)
-    _SMPI = 0b00010;    // AD1CON2<6:2> -- Sample rate interrupt select
+    //_SMPI = 0b00010;    // AD1CON2<6:2> -- Sample rate interrupt select
                         // 00001=Interrupts at the conversion for every 2 samples
 
     // AD1CON3 register (22-3)
-    _ADRC = 0;          // AD1CON3<15> -- Clock source selection
+    //_ADRC = 0;          // AD1CON3<15> -- Clock source selection
                         // 0=Use system clock
-    _SAMC = 0b00001;    // AD1CON3<12:8> -- Auto-sample time select
+    //_SAMC = 0b00001;    // AD1CON3<12:8> -- Auto-sample time select
                         // 00001=Auto sample every A/D period 1*TAD
-    _ADCS = 0b00111111; // AD1CON3<7:0> -- A/D Conversion clock select
+    //_ADCS = 0b00111111; // AD1CON3<7:0> -- A/D Conversion clock select
                         // 00111111=A/D period TAD = 64*TCY
 }
 
@@ -235,10 +258,24 @@ void ADConf(void)
 -------------------------------------------------------------------------------------------------*/
 void forward(int deg)
 {
+    processingTask = 1;
     // Switch both directions to be forward
+    LATBbits.LATB13 = 1;
+    LATBbits.LATB14 = 1;
     // Calculate how long to turn wheels
     // Turn on OC1R
+
+    OC1R = 0.2 * PR2;
     // Begin timer that will let us know when to stop turning
+
+    TMR1 = 0;
+    PR1 = (8.0 * deg)/460.8 * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    _T1IE = 0;          //Enable T1 Interrupt
+
+    return;
     // Set expected distance to check against ultrasound later
 }
 
@@ -249,6 +286,29 @@ void forward(int deg)
 -------------------------------------------------------------------------------------------------*/
 void backwards(int deg)
 {
+    processingTask = 1;
+    // Switch both directions to be backward
+    LATBbits.LATB13 = 0;
+    LATBbits.LATB14 = 0;
+    // Calculate how long to turn wheels
+    // Turn on OC1R
+
+    OC1R = 0.2 * PR2;
+    // Begin timer that will let us know when to stop turning
+
+    //T1CONbits.TON = 1;               //Now turn on timer 1
+    TMR1 = 0;
+    PR1 = (8.0 * deg)/460.8 * (1.0 * PR2);// * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+
+    while(processingTask) {}
+    _T1IE = 0;          //Enable T1 Interrupt
+
+    return;
+    // Set expected distance to check against ultrasound later
+
+
     // Switch both directions to be backwards
     // Calculate how long to turn wheels
     // Turn on OC1R
@@ -264,6 +324,25 @@ void backwards(int deg)
 -------------------------------------------------------------------------------------------------*/
 void turnRight(int deg)
 {
+    processingTask = 1;
+    // Switch both directions to be forward
+    LATBbits.LATB13 = 1;
+    LATBbits.LATB14 = 0;
+    // Calculate how long to turn wheels
+    // Turn on OC1R
+
+    OC1R = 0.2 * PR2;
+    // Begin timer that will let us know when to stop turning
+
+    TMR1 = 0;
+    PR1 = (8.0 * deg)/460.8 * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    _T1IE = 0;          //Enable T1 Interrupt
+
+    return;
+    // Set expected distance to check against ultrasound later
     // Switch directions to have one forward, one backwards
     // Calculate how long to turn wheels
     // Turn on OC1R
@@ -279,6 +358,25 @@ void turnRight(int deg)
 -------------------------------------------------------------------------------------------------*/
 void turnLeft(int deg)
 {
+    processingTask = 1;
+    // Switch both directions to be forward
+    LATBbits.LATB13 = 0;
+    LATBbits.LATB14 = 1;
+    // Calculate how long to turn wheels
+    // Turn on OC1R
+
+    OC1R = 0.2 * PR2;
+    // Begin timer that will let us know when to stop turning
+
+    TMR1 = 0;
+    PR1 = (8.0 * deg)/460.8 * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    _T1IE = 0;          //Enable T1 Interrupt
+
+    return;
+    // Set expected distance to check against ultrasound later
     // Switch directions to have one forward, one backwards
     // Calculate how long to turn wheels
     // Turn on OC1R
@@ -350,9 +448,13 @@ void posCheck()
     it up.
  * Set up in: all Steering functions above
 -------------------------------------------------------------------------------------------------*/
-void _ISR _TxInterrupt(void)
+void _ISR _T1Interrupt(void)
 {
+    _T1IF = 0;          //Clear interrupt flag
+    //T1CONbits.TON = 0;  //And turn off the timer now
     // Turn off OC1R
+    OC1R = 0;
+    processingTask = 0;
     // Check with ultrasound to see if we made it where we expected
 }
 
@@ -425,6 +527,12 @@ int main()
     /* 8) Repeat. Main program start. */
     while(1)
     {
+        forward(360);
+        backwards(360);
+        turnRight(600);
+        turnLeft(600);
+
+
         /* 4) Ball collection
          *      a) Flip out paddle
          *      b) Make sure that ball made it into bowl

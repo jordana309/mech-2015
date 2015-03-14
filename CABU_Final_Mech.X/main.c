@@ -56,6 +56,36 @@
 #include <p24FJ128GA202.h>
 #include <PIC24F_plib.h>
 
+
+
+//beginnning of free code
+
+void UART1Config()
+{
+U1MODE = 0;
+U1BRG = 12; //9600 bps at at 2e6 Fcy
+U1STAbits.UTXISEL0 = 0;
+U1STAbits.UTXISEL1 = 1;
+U1STAbits.URXISEL = 0;
+U1MODEbits.UARTEN = 1; //enables the uart
+U1STAbits.UTXEN = 1; //setting this bit per the data sheet
+IFS0bits.U1RXIF = 0;
+}
+
+char UART1GetChar()
+{
+   while(IFS0bits.U1RXIF == 0); //wait for buffer to receive
+   IFS0bits.U1RXIF = 0; //reset interrupt flag
+   return U1RXREG;
+}
+void UART1PutChar(char Ch)
+{
+    while(U1STAbits.UTXBF == 1); //wait for buffer to be empty
+    U1TXREG = Ch;
+}
+
+//end of free code
+
 /*-------------------------------------------------------------------------------------------------
  0b) Directives for coding - Set up a compiler variable, so we can include other code that is
      only occationally needed. An example of this would be for testing, when we would include the
@@ -74,7 +104,7 @@
 //_CONFIG1();
 
 /* Con Word 2: Oscilator selector (section 9.7 (p154) */
-_CONFIG2(FNOSC_FRCPLL); // 8 MHz w/ PLL (phase-locked loop), allowing increased maximum clock speed
+//_CONFIG2(FNOSC_FRCPLL); // 8 MHz w/ PLL (phase-locked loop), allowing increased maximum clock speed
 
 /* Con Word 3: none yet */
 //_CONFIG3();
@@ -98,12 +128,12 @@ volatile int processingTask = 0;
                                   3 | 26 RB15 - Out, "Sleep" on motor drivers
                                   4 | 25 RB14 - Out, Direction to left wheel
                                   5 | 24 RB13 - Out, Direction to right wheel
-                                  6 | 23 RB12 - PWM for step output, mapped to OC1.
-                                  7 | 22
+         Rp2 (OC3) shooter motor  6 | 23 RB12 - PWM for step output, mapped to OC1.
+         Rp3 (OC2) servo rod      7 | 22
  VSS - GND **                     8 | 21
                                   9 | 20 VCAP*** - Connected by 10uF Cap to GND
                                  10 | 19
-                                 11 | 18
+                                 11 | 18 RB9 - Out, Always Off to M0 setting half step
                                  12 | 17
  VDD - Positive Voltage In **    13 | 16
                                  14 | 15
@@ -129,12 +159,15 @@ void PinConf()
     // Pin 26: Digital Out, "sleep" mode on motor driver chips (RB15)
 
     _RP12R = 13;                //Assign RP12 (pin 23) to function 13 (OC1)
+    _RP9R = 3;                  //Assign RP9 (pin 18) to function 3 (UTX1)
+    _RP2R = 15;                 //Assign RP2 (pin 6) to function 15 (OC3)
+    _RP3R = 14;                //Assign RP3 (pin 21) to function 14 (OC2)
 
-    //_RB13 = 1;                  //Initialize Wheel2 Dir to 0
-    //_RB14 = 1;                  //Initialize Wheel1 Dir to 0
+    _RB13 = 1;                  //Initialize Wheel2 Dir to 0
+    _RB14 = 1;                  //Initialize Wheel1 Dir to 0
     _RB15 = 1;                  //Initialize Sleep to 1 (turns off sleep mode)
-    _RB3 = 1;                   //Set Pin 22 to off -> send this to M0 for full step
-
+    _RB9 = 1;                   //Set Pin 22 to off -> send this to M0 for half step
+    _RB1 = 1;                   //Set RB1 (Pin 5) to ball release solenoid
 }
 
 
@@ -147,10 +180,9 @@ void PinConf()
 -------------------------------------------------------------------------------------------------*/
 void PWMConf()
 {
-    // Configure OC1 (For Pin 23--RB12)
-    // TODO: Map OC1 to Pin 23
-    OC1CON1 = 0;    // Clear OC2 configuration bits
-    OC1CON2 = 0;    // Clear OC2 configuration bits
+//==== Configure OC1 (For Pin 23--RB12)
+    OC1CON1 = 0;    // Clear OC1 configuration bits
+    OC1CON2 = 0;    // Clear OC1 configuration bits
     OC1CON1bits.OCTSEL = 0b000;     // Set it to use timer 2. Sets base for period.
     OC1CON2bits.SYNCSEL = 0b01100;  // Set sync select to timer 2. Sets comparisons and the "beat".
     OC1CON1bits.OCM = 0b110;        // Edge-Aligned PWM mode
@@ -160,13 +192,47 @@ void PWMConf()
     // ticks of PR2. Duity cycle is OC1R/PR2.
     OC1R = 0;       //Begin with 0 duty cycle (no steps sent to stepper motors)
 
-    // TODO: Set up the timer better
-    // Set up the timer
+  // Set up Timer 2
     T2CONbits.TCS = 0; // Internal clock
     T2CONbits.TCKPS = 0; // Don't prescale100
     TMR2 = 0; // Timer set to 0
     T2CONbits.TON = 1; // Timer is on
     PR2 =  3999; // Timer period
+//====
+
+//==== Set up OC3 (For Pin 22--RP11) to turn the shooter motors on with a MOSFET
+    OC3CON1 = 0;    // Clear OC3 configuration bits
+    OC3CON2 = 0;    // Clear OC3 configuration bits
+    OC3CON1bits.OCTSEL = 0b001;     // Set it to use timer 3. Sets base for period.
+    OC3CON2bits.SYNCSEL = 0b01101;  // Set sync select to timer 3. Sets comparisons and the "beat".
+    OC3CON1bits.OCM = 0b110;        // Edge-Aligned PWM mode
+
+    OC3R = 2000;
+
+  // Set up Timer 3
+    T3CONbits.TCS = 0; // Internal clock
+    T3CONbits.TCKPS = 0; // Don't prescale100
+    TMR3 = 0; // Timer set to 0
+    T3CONbits.TON = 1; // Timer is on
+    PR3 = 4999; // Timer period
+//====
+
+//==== Set up OC2 (For Pin 21--RP10) to turn the shooter motors on with a MOSFET
+    OC2CON1 = 0;    // Clear OC3 configuration bits
+    OC2CON2 = 0;    // Clear OC3 configuration bits
+    OC2CON1bits.OCTSEL = 0b010;     // Set it to use timer 3. Sets base for period.
+    OC2CON2bits.SYNCSEL = 0b01110;  // Set sync select to timer 3. Sets comparisons and the "beat".
+    OC2CON1bits.OCM = 0b110;        // Edge-Aligned PWM mode
+
+    OC2R = 10000;
+
+  // Set up Timer 4
+    T4CONbits.TCS = 0; // Internal clock
+    T4CONbits.TCKPS = 0; // Don't prescale100
+    TMR4 = 0; // Timer set to 0
+    T4CONbits.TON = 1; // Timer is on
+    PR4 =  19999; // Timer period
+//====
 
     //Set up timer for determining how long to perform operations
     T1CONbits.TON = 1;      //Don't turn Timer 1 on until we need it
@@ -250,6 +316,55 @@ void ADConf(void)
 // All of these use a timer to stop the PWM after the desired angle should be reached. Thus, a
 //   timer interrupt will be needed, and is included in the interrupts section.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void rodLeft()
+{
+    processingTask = 1;
+    OC2R = 7700;    //Set pulse width to 1950 microSec (45 deg left)
+    TMR1 = 0;
+    PR1 = 10000; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    _T1IE = 0;          //Enable T1 Interrupt
+}
+
+void rodRight()
+{
+    processingTask = 1;
+    OC2R = 3900;    //Set pulse width to 975 microSec (45 deg right)
+    TMR1 = 0;
+    PR1 = 10000; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    _T1IE = 0;          //Enable T1 Interrupt
+}
+
+void shootBall()
+{
+    processingTask = 1;
+    OC3R = 2000;    //Pulse shooter motor to launch balls
+    TMR1 = 0;
+    PR1 = 20000; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    _T1IE = 0;
+}
+
+void releaseBall()
+{
+    processingTask = 1;
+    LATBbits.LATB1 = 1;
+    TMR1 = 0;
+    PR1 = 20000; //Set the timer to one tick per 1.8 degrees times the pulse width
+    //PR1 = deg * 30000;
+    _T1IE = 1;          //Enable T1 Interrupt
+    while(processingTask) {}
+    LATBbits.LATB1 = 0;
+    _T1IE = 0;
+}
 
 /*-------------------------------------------------------------------------------------------------
  Move forward - this function moves us forward a specific number of degrees of motor rotation. It
@@ -454,6 +569,7 @@ void _ISR _T1Interrupt(void)
     //T1CONbits.TON = 0;  //And turn off the timer now
     // Turn off OC1R
     OC1R = 0;
+    OC3R = 0;
     processingTask = 0;
     // Check with ultrasound to see if we made it where we expected
 }
@@ -509,7 +625,7 @@ int main()
     PinConf();
     PWMConf();
     ADConf();
-
+    UART1Config();
 
     /* 2) Orientation in the first 5 seconds
          *      a) Rotate until positioning LED at "max"
@@ -527,11 +643,27 @@ int main()
     /* 8) Repeat. Main program start. */
     while(1)
     {
-        forward(360);
-        backwards(360);
-        turnRight(600);
-        turnLeft(600);
+        
+        /*UART1PutChar('a');
+        UART1PutChar('\n');
+        processingTask = 1;
+        TMR1 = 0;
+        PR1 = 2000; //Set the timer to one tick per 1.8 degrees times the pulse width
+        _T1IE = 1;          //Enable T1 Interrupt
+            while(processingTask) {}
+        _T1IE = 0;*/
 
+        //delay for 1 second
+
+        //forward(360);
+        //backwards(360);
+        //turnRight(600);
+        //turnLeft(600);
+
+        rodLeft();
+        rodRight();
+        shootBall();
+        releaseBall();
 
         /* 4) Ball collection
          *      a) Flip out paddle

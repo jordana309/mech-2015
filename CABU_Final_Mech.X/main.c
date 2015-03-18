@@ -55,7 +55,7 @@
 //#include<p24F16KA301.h> // Maintain as place-holder, in case we need to downgrade
 #include <p24FJ128GA202.h>
 #include <PIC24F_plib.h>
-
+#include "newfile.h"
 
 
 //beginnning of free code
@@ -63,7 +63,7 @@
 void UART1Config()
 {
 U1MODE = 0;
-U1BRG = 12; //9600 bps at at 2e6 Fcy
+U1BRG = 25; //9600 bps at at 2e6 Fcy
 U1STAbits.UTXISEL0 = 0;
 U1STAbits.UTXISEL1 = 1;
 U1STAbits.URXISEL = 0;
@@ -84,6 +84,19 @@ void UART1PutChar(char Ch)
     U1TXREG = Ch;
 }
 
+void printFloat(float data)
+{
+    char floatString[10];
+    int i = 0;
+    sprintf(floatString,"%f",data);
+    while(floatString[i] != '\0')
+    {
+        UART1PutChar(floatString[i]);
+        i++;
+    }
+    UART1PutChar(' ');
+}
+
 //end of free code
 
 /*-------------------------------------------------------------------------------------------------
@@ -92,6 +105,8 @@ void UART1PutChar(char Ch)
      setup for bluetooth. To use this, wrap the necessary code between #ifdef VAR and #endif.
 -------------------------------------------------------------------------------------------------*/
 #define TESTING; // Wraps all code that we need for testing, and allows removal when unneeded.
+volatile int processingTask = 0;
+volatile float usonic1 = 0;
 
 /*-------------------------------------------------------------------------------------------------
  0c) Microprocessor configuration - Set our 4 configuraion registers (Con Words).
@@ -102,6 +117,10 @@ void UART1PutChar(char Ch)
 -------------------------------------------------------------------------------------------------*/
 /* Con Word 1: none yet */
 //_CONFIG1();
+_CONFIG1(JTAGEN_OFF);
+//_CONFIG1(JTAGEN_ON);
+
+
 
 /* Con Word 2: Oscilator selector (section 9.7 (p154) */
 //_CONFIG2(FNOSC_FRCPLL); // 8 MHz w/ PLL (phase-locked loop), allowing increased maximum clock speed
@@ -116,7 +135,7 @@ void UART1PutChar(char Ch)
 // 1) Initial configuration - Configures pins, peripherals
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-volatile int processingTask = 0;
+
 
 
 /*-------------------------------------------------------------------------------------------------
@@ -125,19 +144,23 @@ volatile int processingTask = 0;
  REF: Pin Diagram (p3), 2.0 (minimum connections, p21)
  VDD, GND minimum connection*     1 | 28 VDD - Positive Voltage In **
                                   2 | 27 VSS - GND **
-                                  3 | 26 RB15 - Out, "Sleep" on motor drivers
-                                  4 | 25 RB14 - Out, Direction to left wheel
-                                  5 | 24 RB13 - Out, Direction to right wheel
+                    RA1           3 | 26 RB15 - Out, "Sleep" on motor drivers
+                    RB0           4 | 25 RB14 - Out, Direction to left wheel
+           Ball release solenoid  5 | 24 RB13 - Out, Direction to right wheel
          Rp2 (OC3) shooter motor  6 | 23 RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22
  VSS - GND **                     8 | 21
-                                  9 | 20 VCAP*** - Connected by 10uF Cap to GND
-                                 10 | 19
-                                 11 | 18 RB9 - Out, Always Off to M0 setting half step
-                                 12 | 17
- VDD - Positive Voltage In **    13 | 16
-                                 14 | 15
+                            X     9 | 20 VCAP*** - Connected by 10uF Cap to GND
+                            X    10 | 19
+                            X    11 | 18 X RB9 - Out, Always Off to M0 setting half step
+                            X    12 | 17 O
+ VDD - Positive Voltage In **    13 | 16 O
+                            O    14 | 15 X
 
+ *
+ * X DUNT WURK
+ *
+ * O WORKS WITH JTAG / 2NDARY OSCILLATOR OFF
 * VDD->10K resister. Branch. 100-470 resister to pin 1, 0.1uF, 20V ceramic cap to GND
 ** 0.1uF, 20V Ceramic Cap connects 27 to 28, 8 to 13.
 *** See section 29.2 (p359) and Table 32-11 (p383) on DVR21 (CEFC), which specifies series R < 3ohm
@@ -148,10 +171,14 @@ volatile int processingTask = 0;
 // TODO: Put pin configuration here
 void PinConf()
 {
-    //TRISA = 0x0;    // output for all port A (0000), 4 A bits
+    OSCCONbits.SOSCEN = 1;
+    
+    TRISA = 0x0;    // output for all port A (0000), 4 A bits
     TRISB = 0x0000; // output for all port B (0000 0000 0000 0000), 16 B bits
-    //ANSA = 0x0; // turn off analog input on all pins, port A
+    ANSA = 0x0; // turn off analog input on all pins, port A
     ANSB = 0x0000; // turn off analog input on all pins, port B
+
+    TRISBbits.TRISB7 = 1;   //Set Pin 16 to input (CN23) for UltraSonic1
     // Pin 23: OC1, (RP12), to be used for PWM to motors
     // TODO: Configure OC1 on pin 23
     // Pin 24: Digital Out, direction of right wheel (RB13)
@@ -159,7 +186,7 @@ void PinConf()
     // Pin 26: Digital Out, "sleep" mode on motor driver chips (RB15)
 
     _RP12R = 13;                //Assign RP12 (pin 23) to function 13 (OC1)
-    _RP9R = 3;                  //Assign RP9 (pin 18) to function 3 (UTX1)
+    _RP0R = 3;                  //Assign RP0 (pin 4) to function 3 (UTX1)
     _RP2R = 15;                 //Assign RP2 (pin 6) to function 15 (OC3)
     _RP3R = 14;                //Assign RP3 (pin 21) to function 14 (OC2)
 
@@ -168,6 +195,28 @@ void PinConf()
     _RB15 = 1;                  //Initialize Sleep to 1 (turns off sleep mode)
     _RB9 = 1;                   //Set Pin 22 to off -> send this to M0 for half step
     _RB1 = 1;                   //Set RB1 (Pin 5) to ball release solenoid
+    //_RB8 = 1;
+    _RA0 = 1;
+    _RA1 = 1;
+    //_RB0 = 1;
+
+    //_RB4 = 1;
+    //_RA4 = 1;
+    //_RB5 = 1;
+    //_RB6 = 1;
+    //_RB7 = 1;
+    //_RB8 = 1;
+
+    //_RB11 = 1;
+    //_RB10 = 1;
+
+    // Configure CN interrupt
+    _CN23IE = 1; // Enable CN on pin 4 (CNEN1 register)
+    _CN23PUE = 0; // Disable pull-up resistor (CNPU1 register)
+    _CNIP = 6; // Set CN interrupt priority (IPC4 register)
+    _CNIF = 0; // Clear interrupt flag (IFS1 register)
+    _CNIE = 1; // Enable CN interrupts (IEC1 register)
+
 }
 
 
@@ -241,6 +290,14 @@ void PWMConf()
 
     _T1IE = 0;          //Enable T1 Interrupt
     _T1IF = 0;          //Disable T1 Interrupt Flag
+
+
+    // Set up Timer 5
+    T5CONbits.TCS = 0; // Internal clock
+    T5CONbits.TCKPS = 0b01; // Prescale by 8
+    TMR5 = 0; // Timer set to 0
+    T5CONbits.TON = 0; // Timer is off
+    PR5 =  65535; // Timer period
 
 
 }
@@ -364,6 +421,25 @@ void releaseBall()
     while(processingTask) {}
     LATBbits.LATB1 = 0;
     _T1IE = 0;
+}
+
+void delay(int tics)            //16 tics = 1 ms, 16000 tics = 1 sec
+{
+    processingTask = 1;
+    TMR1 = 0;
+    PR1 = tics;
+    _T1IE = 1;
+    while(processingTask) {}
+    _T1IE = 0;
+}
+
+void readUltra1()
+{
+    LATAbits.LATA1 = 1;
+    delay(8); //Delay 250usec
+    LATAbits.LATA1 = 0;
+    delay(8000); //Delay 50msec
+
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -574,6 +650,31 @@ void _ISR _T1Interrupt(void)
     // Check with ultrasound to see if we made it where we expected
 }
 
+void _ISR _CNInterrupt(void)
+{
+    static int prevValue = 0;
+    _CNIF = 0; // Clear interrupt flag (IFS1 register)
+
+    if(prevValue == 0)
+    {
+        TMR5 = 0;
+        T5CONbits.TON = 1; // Turn timer on
+        prevValue = 1;
+    }
+    else
+    {
+        int timePassed = TMR5;
+        T5CONbits.TON = 0; // Turn timer off
+        prevValue = 0;
+#ifdef TESTING
+#else
+        if(TMR5 > 3480)      //IF we detect > 120 cm (the width of the arena)
+            return;
+#endif
+        usonic1 = timePassed * 2.0 / 58;                //timepassed is 2 microseconds per tic.  microseconds / 58 gives distance in cm
+    }
+}
+
 /*-------------------------------------------------------------------------------------------------
  Ball loaded - This interrupt detects when a ball is in the hopper and ready to go
  * Set up in: 4) Ball collection, 7) Firing the balls
@@ -643,10 +744,12 @@ int main()
     /* 8) Repeat. Main program start. */
     while(1)
     {
-        
-        /*UART1PutChar('a');
+        printFloat(usonic1);
         UART1PutChar('\n');
-        processingTask = 1;
+        printFloat(TMR5);
+        UART1PutChar('\n');
+        delay(8000);
+        /*processingTask = 1;
         TMR1 = 0;
         PR1 = 2000; //Set the timer to one tick per 1.8 degrees times the pulse width
         _T1IE = 1;          //Enable T1 Interrupt
@@ -660,10 +763,12 @@ int main()
         //turnRight(600);
         //turnLeft(600);
 
-        rodLeft();
-        rodRight();
-        shootBall();
-        releaseBall();
+        //rodLeft();
+        //rodRight();
+        //shootBall();
+        //releaseBall();
+
+        readUltra1();
 
         /* 4) Ball collection
          *      a) Flip out paddle

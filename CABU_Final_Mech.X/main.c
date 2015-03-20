@@ -124,6 +124,8 @@ _CONFIG1(JTAGEN_OFF);
 
 /* Con Word 2: Oscilator selector (section 9.7 (p154) */
 //_CONFIG2(FNOSC_FRCPLL); // 8 MHz w/ PLL (phase-locked loop), allowing increased maximum clock speed
+_CONFIG2(POSCMD_HS && OSCIOFCN_ON);
+
 
 /* Con Word 3: none yet */
 //_CONFIG3();
@@ -148,14 +150,14 @@ _CONFIG1(JTAGEN_OFF);
                     RB0           4 | 25 RB14 - Out, Direction to left wheel
            Ball release solenoid  5 | 24 RB13 - Out, Direction to right wheel
          Rp2 (OC3) shooter motor  6 | 23 RB12 - PWM for step output, mapped to OC1.
-         Rp3 (OC2) servo rod      7 | 22
- VSS - GND **                     8 | 21
+         Rp3 (OC2) servo rod      7 | 22 X
+ VSS - GND **                     8 | 21 O
                             X     9 | 20 VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19
                             X    11 | 18 X RB9 - Out, Always Off to M0 setting half step
-                            X    12 | 17 O
- VDD - Positive Voltage In **    13 | 16 O
-                            O    14 | 15 X
+                            X    12 | 17 CN22   Detect Ultrasonic2
+ VDD - Positive Voltage In **    13 | 16 CN23   Detect Ultrasonic1
+             PhotoDiode Input    14 | 15 O
 
  *
  * X DUNT WURK
@@ -179,6 +181,7 @@ void PinConf()
     ANSB = 0x0000; // turn off analog input on all pins, port B
 
     TRISBbits.TRISB7 = 1;   //Set Pin 16 to input (CN23) for UltraSonic1
+    TRISBbits.TRISB8 = 1;   //Set Pin 17 to input (CN22) for UltraSonic2
     // Pin 23: OC1, (RP12), to be used for PWM to motors
     // TODO: Configure OC1 on pin 23
     // Pin 24: Digital Out, direction of right wheel (RB13)
@@ -188,7 +191,7 @@ void PinConf()
     _RP12R = 13;                //Assign RP12 (pin 23) to function 13 (OC1)
     _RP0R = 3;                  //Assign RP0 (pin 4) to function 3 (UTX1)
     _RP2R = 15;                 //Assign RP2 (pin 6) to function 15 (OC3)
-    _RP3R = 14;                //Assign RP3 (pin 21) to function 14 (OC2)
+    _RP3R = 14;                 //Assign RP3 (pin 21) to function 14 (OC2)
 
     _RB13 = 1;                  //Initialize Wheel2 Dir to 0
     _RB14 = 1;                  //Initialize Wheel1 Dir to 0
@@ -200,19 +203,30 @@ void PinConf()
     _RA1 = 1;
     //_RB0 = 1;
 
-    //_RB4 = 1;
+    _RA2 = 1;
+    _RA3 = 1;
+    _RA4 = 1;
+
+    _RB4 = 1;
     //_RA4 = 1;
     //_RB5 = 1;
-    //_RB6 = 1;
+    _RB6 = 1;
     //_RB7 = 1;
     //_RB8 = 1;
 
-    //_RB11 = 1;
-    //_RB10 = 1;
+    _RB11 = 1;
+    _RB10 = 1;
 
     // Configure CN interrupt
-    _CN23IE = 1; // Enable CN on pin 4 (CNEN1 register)
+    _CN23IE = 1; // Enable CN on pin 16 (CNEN1 register)
     _CN23PUE = 0; // Disable pull-up resistor (CNPU1 register)
+    _CNIP = 6; // Set CN interrupt priority (IPC4 register)
+    _CNIF = 0; // Clear interrupt flag (IFS1 register)
+    _CNIE = 1; // Enable CN interrupts (IEC1 register)
+
+    // Configure CN interrupt
+    _CN22IE = 1; // Enable CN on pin 17 (CNEN1 register)
+    _CN22PUE = 0; // Disable pull-up resistor (CNPU1 register)
     _CNIP = 6; // Set CN interrupt priority (IPC4 register)
     _CNIF = 0; // Clear interrupt flag (IFS1 register)
     _CNIE = 1; // Enable CN interrupts (IEC1 register)

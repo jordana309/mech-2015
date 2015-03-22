@@ -468,7 +468,7 @@ void delay(int tics)            //16 tics = 1 ms, 16000 tics = 1 sec
     _T1IE = 0;
 }
 
-void readUltra()
+void pulseUltra()
 {
     LATAbits.LATA1 = 1;
     delay(8); //Delay 250usec
@@ -849,14 +849,28 @@ int main()
             
         }
         UART1PutChar('\n');
-        readUltra();
+        pulseUltra();
+/*
+    //Wait until both limit switches are hit
+        while(!isLimitSwitch1Pressed() && !isLimitSwitch2Pressed())
+        {
+            backwards(20);  //Back up (turn wheels 20 degrees)
+            if(isLimitSwitch1Pressed())
+            {
+                turnLeft(20);
+            }
+            else if(isLimitSwitch2Pressed())
+            {
+                turnRight(20);
+            }
+        }
+    //Drive to center
+        forward(360);
+        forward(360);
+        forward(360);
+        forward(360);
+ */
 
-        //delay for 1 second
-
-        //forward(360);
-        //backwards(360);
-        //turnRight(600);
-        //turnLeft(600);
 
         //rodLeft();
         //rodRight();

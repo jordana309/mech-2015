@@ -54,8 +54,7 @@
 #include <stdlib.h>
 //#include<p24F16KA301.h> // Maintain as place-holder, in case we need to downgrade
 #include <p24FJ128GA202.h>
-#include <PIC24F_plib.h>
-#include "newfile.h"
+//#include <PIC24F_plib.h>
 
 
 //beginnning of free code
@@ -104,9 +103,13 @@ void printFloat(float data)
      only occationally needed. An example of this would be for testing, when we would include the
      setup for bluetooth. To use this, wrap the necessary code between #ifdef VAR and #endif.
 -------------------------------------------------------------------------------------------------*/
-#define TESTING; // Wraps all code that we need for testing, and allows removal when unneeded.
+// Wraps all code that we need for testing, and allows removal when unneeded.
+#define TESTING 
 volatile int processingTask = 0;
 volatile float usonic1 = 0;
+volatile float usonic2 = 0;
+volatile int limitSwitch1 = 0;
+volatile int limitSwitch2 = 0;
 
 /*-------------------------------------------------------------------------------------------------
  0c) Microprocessor configuration - Set our 4 configuraion registers (Con Words).
@@ -145,19 +148,19 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
  * Called from main() intro section.
  REF: Pin Diagram (p3), 2.0 (minimum connections, p21)
  VDD, GND minimum connection*     1 | 28 VDD - Positive Voltage In **
-                                  2 | 27 VSS - GND **
-                    RA1           3 | 26 RB15 - Out, "Sleep" on motor drivers
-                    RB0           4 | 25 RB14 - Out, Direction to left wheel
+                 Limit switch-1   2 | 27 VSS - GND **
+             Ultrasonic trigger   3 | 26 RB15 - Out, "Sleep" on motor drivers
+                    UART1         4 | 25 RB14 - Out, Direction to left wheel
            Ball release solenoid  5 | 24 RB13 - Out, Direction to right wheel
          Rp2 (OC3) shooter motor  6 | 23 RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22 X
- VSS - GND **                     8 | 21 O
+ VSS - GND **                     8 | 21 Limit switch-2
                             X     9 | 20 VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19
                             X    11 | 18 X RB9 - Out, Always Off to M0 setting half step
                             X    12 | 17 CN22   Detect Ultrasonic2
  VDD - Positive Voltage In **    13 | 16 CN23   Detect Ultrasonic1
-             PhotoDiode Input    14 | 15 O
+             PhotoDiode Input 1  14 | 15 PhotoDiode Input 2
 
  *
  * X DUNT WURK
@@ -173,7 +176,8 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
 // TODO: Put pin configuration here
 void PinConf()
 {
-    OSCCONbits.SOSCEN = 1;
+    OSCCONbits.SOSCEN = 0;
+    //OSCCONbits.
     
     TRISA = 0x0;    // output for all port A (0000), 4 A bits
     TRISB = 0x0000; // output for all port B (0000 0000 0000 0000), 16 B bits
@@ -182,6 +186,9 @@ void PinConf()
 
     TRISBbits.TRISB7 = 1;   //Set Pin 16 to input (CN23) for UltraSonic1
     TRISBbits.TRISB8 = 1;   //Set Pin 17 to input (CN22) for UltraSonic2
+    TRISAbits.TRISA0 = 1;   //Set Pin 2 to input (RA0) for LimitSwitch1
+    TRISBbits.TRISB10 = 1;  //Set Pin 21 to input (RB10) for LimitSwitch2
+
     // Pin 23: OC1, (RP12), to be used for PWM to motors
     // TODO: Configure OC1 on pin 23
     // Pin 24: Digital Out, direction of right wheel (RB13)
@@ -193,29 +200,29 @@ void PinConf()
     _RP2R = 15;                 //Assign RP2 (pin 6) to function 15 (OC3)
     _RP3R = 14;                 //Assign RP3 (pin 21) to function 14 (OC2)
 
-    _RB13 = 1;                  //Initialize Wheel2 Dir to 0
-    _RB14 = 1;                  //Initialize Wheel1 Dir to 0
-    _RB15 = 1;                  //Initialize Sleep to 1 (turns off sleep mode)
-    _RB9 = 1;                   //Set Pin 22 to off -> send this to M0 for half step
-    _RB1 = 1;                   //Set RB1 (Pin 5) to ball release solenoid
+    LATBbits.LATB13 = 1;        //Initialize Wheel2 Dir to 0
+    LATBbits.LATB14 = 1;        //Initialize Wheel1 Dir to 0
+    LATBbits.LATB15 = 1;        //Initialize Sleep to 1 (turns off sleep mode)
+    LATBbits.LATB9 = 1;         //Set Pin 22 to on -> send this to M0 for half step (if left unconnected it stalls)
+
+    LATBbits.LATB1 = 1;         //Set RB1 (Pin 5) to ball release solenoid
     //_RB8 = 1;
-    _RA0 = 1;
-    _RA1 = 1;
+    //_RA0 = 1;
+    //_RA1 = 1;
     //_RB0 = 1;
 
-    _RA2 = 1;
-    _RA3 = 1;
-    _RA4 = 1;
-
-    _RB4 = 1;
+    //_RA2 = 1;
+    //_RA3 = 1;
     //_RA4 = 1;
+
+    //_RB4 = 1;
     //_RB5 = 1;
-    _RB6 = 1;
+    //_RB6 = 1;
     //_RB7 = 1;
     //_RB8 = 1;
 
-    _RB11 = 1;
-    _RB10 = 1;
+    //_RB11 = 1;
+    //_RB10 = 1;
 
     // Configure CN interrupt
     _CN23IE = 1; // Enable CN on pin 16 (CNEN1 register)
@@ -230,6 +237,20 @@ void PinConf()
     _CNIP = 6; // Set CN interrupt priority (IPC4 register)
     _CNIF = 0; // Clear interrupt flag (IFS1 register)
     _CNIE = 1; // Enable CN interrupts (IEC1 register)
+
+    /*// Configure CN interrupt for Switch1
+    _CN2IE = 1; // Enable CN on pin 2 (CNEN1 register)
+    _CN2PUE = 0; // Disable pull-up resistor (CNPU1 register)
+    _CNIP = 6; // Set CN interrupt priority (IPC4 register)
+    _CNIF = 0; // Clear interrupt flag (IFS1 register)
+    _CNIE = 1; // Enable CN interrupts (IEC1 register)
+
+    // Configure CN interrupt for Switch2
+    _CN16IE = 1; // Enable CN on pin 21 (CNEN1 register)
+    _CN16PUE = 0; // Disable pull-up resistor (CNPU1 register)
+    _CNIP = 6; // Set CN interrupt priority (IPC4 register)
+    _CNIF = 0; // Clear interrupt flag (IFS1 register)
+    _CNIE = 1; // Enable CN interrupts (IEC1 register)*/
 
 }
 
@@ -447,13 +468,48 @@ void delay(int tics)            //16 tics = 1 ms, 16000 tics = 1 sec
     _T1IE = 0;
 }
 
-void readUltra1()
+void readUltra()
 {
     LATAbits.LATA1 = 1;
     delay(8); //Delay 250usec
     LATAbits.LATA1 = 0;
     delay(8000); //Delay 50msec
+}
 
+int eventLimitSwitch1Pressed()
+{
+    static int state = 1;   //1 = open, 0 = pressed
+
+    int read = _RA0;
+    if(read == 0 && state == 1)       //pressed button!
+    {
+        state = 0;
+        return 1;
+    }
+    if(read == 1 && state == 0)       //button released!
+    {
+        state = 1;
+        return 1;
+    }
+    return 0;
+}
+
+int isLimitSwitch1Pressed()
+{
+    int read = _RA0;
+    if(read == 0)       //0 = pressed
+        return 1;
+    else                //1 = open
+        return 0;
+}
+
+int isLimitSwitch2Pressed()
+{
+    int read = _RB10;
+    if(read == 0)       //0 = pressed
+        return 1;
+    else                //1 = open
+        return 0;
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -666,26 +722,40 @@ void _ISR _T1Interrupt(void)
 
 void _ISR _CNInterrupt(void)
 {
-    static int prevValue = 0;
+    static int prevUS1 = 0;
+    static int prevUS2 = 0;
     _CNIF = 0; // Clear interrupt flag (IFS1 register)
 
-    if(prevValue == 0)
+    int readUS1 = _RB7;
+    int readUS2 = _RB8;
+
+    if(prevUS1 == 0 && prevUS2 == 0) //Just got echo from USonic.  Start timing
     {
         TMR5 = 0;
         T5CONbits.TON = 1; // Turn timer on
-        prevValue = 1;
+        prevUS1 = 1;
+        prevUS2 = 1;
     }
-    else
+
+    else if(prevUS1 == 1 && readUS1 == 0)    //Response from US1 finished.
     {
         int timePassed = TMR5;
-        T5CONbits.TON = 0; // Turn timer off
-        prevValue = 0;
-#ifdef TESTING
-#else
-        if(TMR5 > 3480)      //IF we detect > 120 cm (the width of the arena)
-            return;
-#endif
+        prevUS1 = 0;
         usonic1 = timePassed * 2.0 / 58;                //timepassed is 2 microseconds per tic.  microseconds / 58 gives distance in cm
+    }
+
+    else if(prevUS2 == 1 && readUS2 == 0)    //Response from US2 finished.
+    {
+        int timePassed = TMR5;
+        prevUS2 = 0;
+        //if(TMR5 > 3480)      //IF we detect > 120 cm (the width of the arena)
+        //    return;
+        usonic2 = timePassed * 2.0 / 58;                //timepassed is 2 microseconds per tic.  microseconds / 58 gives distance in cm
+    }
+
+    else if(readUS1 == 0 && readUS2 == 0)    //Both US responses have finished
+    {
+        T5CONbits.TON = 0;  //Turn timer off
     }
 }
 
@@ -759,16 +829,27 @@ int main()
     while(1)
     {
         printFloat(usonic1);
+        UART1PutChar(' ');
+        printFloat(usonic2);
+        UART1PutChar(' ');
+        if(isLimitSwitch1Pressed())
+        {
+            UART1PutChar('O');
+            UART1PutChar('N');
+            UART1PutChar('1');
+            UART1PutChar(' ');
+        }
+
+        if(isLimitSwitch2Pressed())
+        {
+            UART1PutChar('O');
+            UART1PutChar('N');
+            UART1PutChar('2');
+            UART1PutChar(' ');
+            
+        }
         UART1PutChar('\n');
-        printFloat(TMR5);
-        UART1PutChar('\n');
-        delay(8000);
-        /*processingTask = 1;
-        TMR1 = 0;
-        PR1 = 2000; //Set the timer to one tick per 1.8 degrees times the pulse width
-        _T1IE = 1;          //Enable T1 Interrupt
-            while(processingTask) {}
-        _T1IE = 0;*/
+        readUltra();
 
         //delay for 1 second
 
@@ -781,8 +862,6 @@ int main()
         //rodRight();
         //shootBall();
         //releaseBall();
-
-        readUltra1();
 
         /* 4) Ball collection
          *      a) Flip out paddle

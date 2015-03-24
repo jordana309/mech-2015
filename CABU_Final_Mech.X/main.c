@@ -83,6 +83,19 @@ void UART1PutChar(char Ch)
     U1TXREG = Ch;
 }
 
+// Useful string transmission functions
+
+void printText(char text[])
+{
+    int i = 0;
+    while(text[i] != '\0')
+    {
+        UART1PutChar(text[i]);
+        i++;
+    }
+    UART1PutChar(' ');
+}
+
 void printFloat(float data)
 {
     char floatString[10];
@@ -91,6 +104,19 @@ void printFloat(float data)
     while(floatString[i] != '\0')
     {
         UART1PutChar(floatString[i]);
+        i++;
+    }
+    UART1PutChar(' ');
+}
+
+void printInt(int data)
+{
+    char intString[10];
+    int i = 0;
+    sprintf(intString,"%d",data);
+    while(intString[i] != '\0')
+    {
+        UART1PutChar(intString[i]);
         i++;
     }
     UART1PutChar(' ');

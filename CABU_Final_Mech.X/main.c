@@ -148,13 +148,13 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
  * Called from main() intro section.
  REF: Pin Diagram (p3), 2.0 (minimum connections, p21)
  VDD, GND minimum connection*     1 | 28 VDD - Positive Voltage In **
-                 Limit switch-1   2 | 27 VSS - GND **
+                 Limit switch-L   2 | 27 VSS - GND **
              Ultrasonic trigger   3 | 26 RB15 - Out, "Sleep" on motor drivers
                     UART1         4 | 25 RB14 - Out, Direction to left wheel
            Ball release solenoid  5 | 24 RB13 - Out, Direction to right wheel
          Rp2 (OC3) shooter motor  6 | 23 RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22 X
- VSS - GND **                     8 | 21 Limit switch-2
+ VSS - GND **                     8 | 21 Limit switch-R
                             X     9 | 20 VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19
                             X    11 | 18 X RB9 - Out, Always Off to M0 setting half step
@@ -206,23 +206,6 @@ void PinConf()
     LATBbits.LATB9 = 1;         //Set Pin 22 to on -> send this to M0 for half step (if left unconnected it stalls)
 
     LATBbits.LATB1 = 1;         //Set RB1 (Pin 5) to ball release solenoid
-    //_RB8 = 1;
-    //_RA0 = 1;
-    //_RA1 = 1;
-    //_RB0 = 1;
-
-    //_RA2 = 1;
-    //_RA3 = 1;
-    //_RA4 = 1;
-
-    //_RB4 = 1;
-    //_RB5 = 1;
-    //_RB6 = 1;
-    //_RB7 = 1;
-    //_RB8 = 1;
-
-    //_RB11 = 1;
-    //_RB10 = 1;
 
     // Configure CN interrupt
     _CN23IE = 1; // Enable CN on pin 16 (CNEN1 register)
@@ -237,21 +220,6 @@ void PinConf()
     _CNIP = 6; // Set CN interrupt priority (IPC4 register)
     _CNIF = 0; // Clear interrupt flag (IFS1 register)
     _CNIE = 1; // Enable CN interrupts (IEC1 register)
-
-    /*// Configure CN interrupt for Switch1
-    _CN2IE = 1; // Enable CN on pin 2 (CNEN1 register)
-    _CN2PUE = 0; // Disable pull-up resistor (CNPU1 register)
-    _CNIP = 6; // Set CN interrupt priority (IPC4 register)
-    _CNIF = 0; // Clear interrupt flag (IFS1 register)
-    _CNIE = 1; // Enable CN interrupts (IEC1 register)
-
-    // Configure CN interrupt for Switch2
-    _CN16IE = 1; // Enable CN on pin 21 (CNEN1 register)
-    _CN16PUE = 0; // Disable pull-up resistor (CNPU1 register)
-    _CNIP = 6; // Set CN interrupt priority (IPC4 register)
-    _CNIF = 0; // Clear interrupt flag (IFS1 register)
-    _CNIE = 1; // Enable CN interrupts (IEC1 register)*/
-
 }
 
 
@@ -264,7 +232,7 @@ void PinConf()
 -------------------------------------------------------------------------------------------------*/
 void PWMConf()
 {
-//==== Configure OC1 (For Pin 23--RB12)
+//==== Configure OC1 (For Pin 23--RB12) for stepper motors
     OC1CON1 = 0;    // Clear OC1 configuration bits
     OC1CON2 = 0;    // Clear OC1 configuration bits
     OC1CON1bits.OCTSEL = 0b000;     // Set it to use timer 2. Sets base for period.
@@ -301,7 +269,7 @@ void PWMConf()
     PR3 = 4999; // Timer period
 //====
 
-//==== Set up OC2 (For Pin 21--RP10) to turn the shooter motors on with a MOSFET
+//==== Set up OC2 to move servo for ball collection
     OC2CON1 = 0;    // Clear OC3 configuration bits
     OC2CON2 = 0;    // Clear OC3 configuration bits
     OC2CON1bits.OCTSEL = 0b010;     // Set it to use timer 3. Sets base for period.
@@ -412,89 +380,55 @@ void ADConf(void)
 void rodLeft()
 {
     processingTask = 1;
-    OC2R = 7700;    //Set pulse width to 1950 microSec (45 deg left)
-    TMR1 = 0;
-    PR1 = 10000; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    _T1IE = 0;          //Enable T1 Interrupt
+    OC2R = 7700;    //Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
+    delay(10000);   //Wait for 0.625 seconds
 }
 
 void rodRight()
 {
     processingTask = 1;
-    OC2R = 3900;    //Set pulse width to 975 microSec (45 deg right)
-    TMR1 = 0;
-    PR1 = 10000; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    _T1IE = 0;          //Enable T1 Interrupt
+    OC2R = 3900;    //Set pulse width to 975 microSec (45 deg right) //MAY HAVE CHANGED BY x4
+    delay(10000);   //Wait for 0.625 seconds
 }
 
 void shootBall()
 {
-    processingTask = 1;
-    OC3R = 2000;    //Pulse shooter motor to launch balls
-    TMR1 = 0;
-    PR1 = 20000; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    _T1IE = 0;
+    OC3R = 2000;    //Pulse shooter motors to launch balls
+    delay(20000);   //Wait for 1.25 seconds
+    OC3R = 0;       //Turn off shooter motors
 }
 
 void releaseBall()
 {
-    processingTask = 1;
-    LATBbits.LATB1 = 1;
-    TMR1 = 0;
-    PR1 = 20000; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    LATBbits.LATB1 = 0;
-    _T1IE = 0;
+    LATBbits.LATB1 = 1;     //Open solenoid to release ball
+    delay(20000);           //Wait for 1.25 seconds
+    LATBbits.LATB1 = 0;     //Close solenoid
 }
 
 void delay(int tics)            //16 tics = 1 ms, 16000 tics = 1 sec
 {
     processingTask = 1;
-    TMR1 = 0;
-    PR1 = tics;
-    _T1IE = 1;
-    while(processingTask) {}
-    _T1IE = 0;
+    TMR1 = 0;                   //Reset Timer 1
+    PR1 = tics;                 //Set Timer 1 clock
+    _T1IE = 1;                  //Enable Timer 1 interrupt
+    while(processingTask) {}    //Wait for Timer 1 to finish
+    _T1IE = 0;                  //Disable Timer 1 interrupt
 }
 
 void pulseUltra()
 {
     LATAbits.LATA1 = 1;
-    delay(8); //Delay 250usec
+    delay(8);               //Send pulse for 0.5 microsec   //TIME MAY HAVE CHANGED
     LATAbits.LATA1 = 0;
-    delay(8000); //Delay 50msec
+    delay(8000);            //Wait 50 millisec for echo     //TIME MAY HAVE CHANGED
+                            //Also, this delay may not be needed since the echo is
+                            //handled in the CN interrupt.  However, we don't want
+                            //to send another pulse too soon without giving the first
+                            //echo a chance to come back or we will get a continuous
+                            //response
 }
 
-int eventLimitSwitch1Pressed()
-{
-    static int state = 1;   //1 = open, 0 = pressed
-
-    int read = _RA0;
-    if(read == 0 && state == 1)       //pressed button!
-    {
-        state = 0;
-        return 1;
-    }
-    if(read == 1 && state == 0)       //button released!
-    {
-        state = 1;
-        return 1;
-    }
-    return 0;
-}
-
-int isLimitSwitch1Pressed()
+int isLimitSwitchLPressed()
 {
     int read = _RA0;
     if(read == 0)       //0 = pressed
@@ -503,7 +437,7 @@ int isLimitSwitch1Pressed()
         return 0;
 }
 
-int isLimitSwitch2Pressed()
+int isLimitSwitchRPressed()
 {
     int read = _RB10;
     if(read == 0)       //0 = pressed
@@ -518,25 +452,13 @@ int isLimitSwitch2Pressed()
  * Called from:
 -------------------------------------------------------------------------------------------------*/
 void forward(int deg)
-{
-    processingTask = 1;
-    // Switch both directions to be forward
-    LATBbits.LATB13 = 1;
+{ 
+    LATBbits.LATB13 = 1;            // Switch both directions to be forward
     LATBbits.LATB14 = 1;
-    // Calculate how long to turn wheels
-    // Turn on OC1R
 
-    OC1R = 0.2 * PR2;
-    // Begin timer that will let us know when to stop turning
+    OC1R = 0.2 * PR2;               // Turn on OC1R, sending pulses to stepper motors
+    delay((2.0 * deg)/460.8 * PR2); //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
 
-    TMR1 = 0;
-    PR1 = (8.0 * deg)/460.8 * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    _T1IE = 0;          //Enable T1 Interrupt
-
-    return;
     // Set expected distance to check against ultrasound later
 }
 
@@ -547,34 +469,11 @@ void forward(int deg)
 -------------------------------------------------------------------------------------------------*/
 void backwards(int deg)
 {
-    processingTask = 1;
-    // Switch both directions to be backward
-    LATBbits.LATB13 = 0;
+    LATBbits.LATB13 = 0;            // Switch both directions to be forward
     LATBbits.LATB14 = 0;
-    // Calculate how long to turn wheels
-    // Turn on OC1R
 
-    OC1R = 0.2 * PR2;
-    // Begin timer that will let us know when to stop turning
-
-    //T1CONbits.TON = 1;               //Now turn on timer 1
-    TMR1 = 0;
-    PR1 = (8.0 * deg)/460.8 * (1.0 * PR2);// * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-
-    while(processingTask) {}
-    _T1IE = 0;          //Enable T1 Interrupt
-
-    return;
-    // Set expected distance to check against ultrasound later
-
-
-    // Switch both directions to be backwards
-    // Calculate how long to turn wheels
-    // Turn on OC1R
-    // Begin timer that will let us know when to stop turning
-    // Set expected distance to check against ultrasound later
+    OC1R = 0.2 * PR2;               // Turn on OC1R, sending pulses to stepper motors
+    delay((2.0 * deg)/460.8 * PR2); //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -583,32 +482,13 @@ void backwards(int deg)
     in opposite directions, turning us.
  * Called from:
 -------------------------------------------------------------------------------------------------*/
-void turnRight(int deg)
+void turnRight(int deg)     //USES MOTOR DEGREES AT THE MOMENT
 {
-    processingTask = 1;
-    // Switch both directions to be forward
-    LATBbits.LATB13 = 1;
+    LATBbits.LATB13 = 1;            // Switch both directions to be forward
     LATBbits.LATB14 = 0;
-    // Calculate how long to turn wheels
-    // Turn on OC1R
 
-    OC1R = 0.2 * PR2;
-    // Begin timer that will let us know when to stop turning
-
-    TMR1 = 0;
-    PR1 = (8.0 * deg)/460.8 * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    _T1IE = 0;          //Enable T1 Interrupt
-
-    return;
-    // Set expected distance to check against ultrasound later
-    // Switch directions to have one forward, one backwards
-    // Calculate how long to turn wheels
-    // Turn on OC1R
-    // Begin timer that will let us know when to stop turning
-    // Set expected distance to check against ultrasound later
+    OC1R = 0.2 * PR2;               // Turn on OC1R, sending pulses to stepper motors
+    delay((2.0 * deg)/460.8 * PR2); //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -617,32 +497,13 @@ void turnRight(int deg)
     in opposite directions, turning us.
  * Called from:
 -------------------------------------------------------------------------------------------------*/
-void turnLeft(int deg)
+void turnLeft(int deg)      //USES MOTOR DEGREES AT THE MOMENT
 {
-    processingTask = 1;
-    // Switch both directions to be forward
-    LATBbits.LATB13 = 0;
+    LATBbits.LATB13 = 0;            // Switch both directions to be forward
     LATBbits.LATB14 = 1;
-    // Calculate how long to turn wheels
-    // Turn on OC1R
 
-    OC1R = 0.2 * PR2;
-    // Begin timer that will let us know when to stop turning
-
-    TMR1 = 0;
-    PR1 = (8.0 * deg)/460.8 * PR2; //Set the timer to one tick per 1.8 degrees times the pulse width
-    //PR1 = deg * 30000;
-    _T1IE = 1;          //Enable T1 Interrupt
-    while(processingTask) {}
-    _T1IE = 0;          //Enable T1 Interrupt
-
-    return;
-    // Set expected distance to check against ultrasound later
-    // Switch directions to have one forward, one backwards
-    // Calculate how long to turn wheels
-    // Turn on OC1R
-    // Begin timer that will let us know when to stop turning
-    // Set expected distance to check against ultrasound later
+    OC1R = 0.2 * PR2;               // Turn on OC1R, sending pulses to stepper motors
+    delay((2.0 * deg)/460.8 * PR2); //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -715,7 +576,6 @@ void _ISR _T1Interrupt(void)
     //T1CONbits.TON = 0;  //And turn off the timer now
     // Turn off OC1R
     OC1R = 0;
-    OC3R = 0;
     processingTask = 0;
     // Check with ultrasound to see if we made it where we expected
 }
@@ -832,7 +692,7 @@ int main()
         UART1PutChar(' ');
         printFloat(usonic2);
         UART1PutChar(' ');
-        if(isLimitSwitch1Pressed())
+        if(isLimitSwitchLPressed())
         {
             UART1PutChar('O');
             UART1PutChar('N');
@@ -840,36 +700,45 @@ int main()
             UART1PutChar(' ');
         }
 
-        if(isLimitSwitch2Pressed())
+        if(isLimitSwitchRPressed())
         {
             UART1PutChar('O');
             UART1PutChar('N');
             UART1PutChar('2');
             UART1PutChar(' ');
-            
         }
         UART1PutChar('\n');
         pulseUltra();
-/*
+
+        //turnLeft()
+
     //Wait until both limit switches are hit
-        while(!isLimitSwitch1Pressed() && !isLimitSwitch2Pressed())
+        while(!isLimitSwitchLPressed() || !isLimitSwitchRPressed())
         {
-            backwards(20);  //Back up (turn wheels 20 degrees)
-            if(isLimitSwitch1Pressed())
+            if(!isLimitSwitchLPressed() && !isLimitSwitchRPressed())
             {
-                turnLeft(20);
+                backwards(20);  //Back up (turn wheels 20 degrees)
             }
-            else if(isLimitSwitch2Pressed())
+            else if(isLimitSwitchLPressed())
             {
-                turnRight(20);
+                turnLeft(80);
             }
+            else if(isLimitSwitchRPressed())
+            {
+                turnRight(80);
+            }
+
         }
     //Drive to center
         forward(360);
         forward(360);
         forward(360);
         forward(360);
- */
+        forward(360);
+
+        /*forward(360);
+        backwards(360);*/
+ 
 
 
         //rodLeft();

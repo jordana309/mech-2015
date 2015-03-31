@@ -15,7 +15,7 @@
    Requires one pin */
 
 #ifndef SENSORS_H
-#define	SENSORS_H
+  #define SENSORS_H
 #endif
 
 /*-------------------------------------------------------------------------------------------------
@@ -27,9 +27,16 @@
 int isLimitSwitchLPressed()
 {
     int read = _RA0;
+
     if(read == 0)       // 0 = pressed
+    {
         return 1;
-    else                // 1 = open
+        // Echo value to bluetooth
+        #ifdef TESTING
+          printText('LLim On');
+          ('\n');
+        #endif
+    } else              // 1 = open
         return 0;
 }
 
@@ -42,9 +49,16 @@ int isLimitSwitchLPressed()
 int isLimitSwitchRPressed()
 {
     int read = _RB10;
+
     if(read == 0)       // 0 = pressed
+    {
         return 1;
-    else                // 1 = open
+        // Echo value to bluetooth
+        #ifdef TESTING
+          printText('RLim On');
+          ('\n');
+        #endif
+    } else              // 1 = open
         return 0;
 }
 
@@ -64,15 +78,88 @@ void pulseUltra()
         waitingUS = 1;          // Set a flag so we know we're waiting. Reset in CN notification.
         LATAbits.LATA1 = 0;     // Turn off trigger
     }
+    
+    // Echo value to bluetooth
+    #ifdef TESTING
+      printText('LUR: ');
+      printFloat(usonicL);
+      printText(' RUR: ');
+      printFloat(usonicR);
+      UART1PutChar('\n');
+    #endif
 }
 
 /*-------------------------------------------------------------------------------------------------
- IR sensors -
+ Check left IR - Read from the IR sensor 5 times, and average the values. This is essentially a
+    digital filter to clean up the noise on the IR line. After, cycle the variables so that a
+    moving average is maintained.
  * Called from:
 -------------------------------------------------------------------------------------------------*/
-void IRSensors()
+float checkLIR()
 {
+    // Previous 4 values (val1-4). val5 will hold the new value.
+    static float val1 = 0;
+    static float val2 = 0;
+    static float val3 = 0;
+    static float val4 = 0;
+    static float val5 = 0;
 
+    // Pull in current value
+    val5 = 3.3 * ADC1BUF6 / 4095.0;
+
+    // Calculate average
+    float avg = (val1+val2+val3+val4+val5)/5.0;
+
+    // cycle data
+    val1=val2;
+    val2=val3;
+    val3=val4;
+    val4=val5;
+
+    // Echo value to bluetooth
+    #ifdef TESTING
+      printText("LIR: ");
+      printFloat(avg);
+      UART1PutChar('\n');
+    #endif
+
+    return(avg);
+}
+
+/*-------------------------------------------------------------------------------------------------
+ Check right IR - Read from the IR sensor 5 times, and average the values. This is essentially a
+    digital filter to clean up the noise on the IR line. After, cycle the variables so that a
+    moving average is maintained.
+ * Called from:
+-------------------------------------------------------------------------------------------------*/
+float checkBIR()
+{
+    // Previous 4 values (val1-4). val5 will hold the new value.
+    static float val1 = 0;
+    static float val2 = 0;
+    static float val3 = 0;
+    static float val4 = 0;
+    static float val5 = 0;
+
+    // Pull in current value
+    val5 = 3.3 * ADC1BUF7 / 4095.0;
+
+    // Calculate average
+    float avg = (val1+val2+val3+val4+val5)/5;
+
+    // cycle data
+    val1=val2;
+    val2=val3;
+    val3=val4;
+    val4=val5;
+
+    // Echo value to bluetooth
+    #ifdef TESTING
+      printText("BIR: ");
+      printFloat(avg);
+      UART1PutChar('\n');
+    #endif
+    return(avg);
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -81,5 +168,8 @@ void IRSensors()
 -------------------------------------------------------------------------------------------------*/
 void BBSensors()
 {
-
+    // Echo value to bluetooth
+    #ifdef TESTING
+      //Things
+    #endif
 }

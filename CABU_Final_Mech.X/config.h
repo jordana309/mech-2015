@@ -33,12 +33,17 @@ void PinConf()
     TRISBbits.TRISB8 = 1;   // Set Pin 17 to input (CN22) for UltraSonicR
     TRISAbits.TRISA0 = 1;   // Set Pin  2 to input (RA0)  for LimitSwitchL
     TRISBbits.TRISB10 = 1;  // Set Pin 21 to input (RB10) for LimitSwitchR
-    // Set Pin 14 to analog input (RB5) for PhotoDiode-FL
+
+    ANSBbits.ANSB13 = 1;
     ANSBbits.ANSB14 = 1;
-    TRISBbits.TRISB14 = 1;
+    TRISBbits.TRISB13 = 1;  // Set Pin 25 to input (RB13) for LEDL
+    TRISBbits.TRISB14 = 1;  // Set Pin 26 to input (RB14) for LEDR
+    // Set Pin 14 to analog input (RB5) for PhotoDiode-FL
+    //ANSBbits.ANSB5 = 1;
+    TRISBbits.TRISB5 = 0;
     // Set Pin 15 to analog input (RB6) for PhotoDiode-BR
-    ANSBbits.ANSB15 = 1;
-    TRISBbits.TRISB15 = 1;
+    //ANSBbits.ANSB6 = 1;
+    TRISBbits.TRISB6 = 0;
 
     // Pin 2: Left limit switch (RA0). Digital input.
     // Pin 3: Trigger for Ultrosonics (RA1). Digital output.
@@ -64,11 +69,13 @@ void PinConf()
     // Pin 26: "Sleep" mode on motor driver chips (RB15). Digital output.
 
     // Initialize pins
-    LATBbits.LATB13 = 1; // Initialize WheelR Dir to 0
-    LATBbits.LATB14 = 1; // Initialize WheelL Dir to 0
+    LATBbits.LATB5 = 1; // Initialize WheelR Dir to 0
+    LATBbits.LATB6 = 1; // Initialize WheelL Dir to 0
     LATBbits.LATB15 = 1; // Initialize Sleep to 1 (turns off sleep mode)
     LATBbits.LATB9 = 1;  // Initialize step size (M0) to half step (Stalls if left unconnected)
     LATBbits.LATB1 = 0;  // Initialize ball release solenoid to off (out)
+    LATBbits.LATB5 = 1;
+    LATBbits.LATB6 = 1;
 
     // Configure CN interrupt
     _CN23IE = 1;  // Enable CN on pin 16 (CNEN1 register)
@@ -176,23 +183,23 @@ void ADConf(void)
 
     // First, choose pins using AD1CHS register (22-5)
 
-    //_CH0NA = 0b000;     // Choose GND (pin 20) as negative input
-    //_CH0SA = 0b01100; // Choose AN12 (pin 15) as positive input. Less reliable
+    _CH0NA = 0b000;     // Choose GND (pin 20) as negative input
+    _CH0SA = 0b00110; // Choose AN6 (pin 25) as positive input. Less reliable
                         // than using AD1CSSL/H, so we don't use it
 
     // AD1CON1 register (22-1)
-    //_ADON = 1;      // AD1CON1<15> -- A/D on?
+    _ADON = 1;      // AD1CON1<15> -- A/D on?
                     // 1=On
-    //_ADSIDL = 0;    // AD1CON1<13> -- A/D stops while in idle mode?
+    _ADSIDL = 1;    // AD1CON1<13> -- A/D stops while in idle mode?
                     // 0=yes
-    //_MODE12 = 1;    // AD1CON1<10> -- 12-bit or 10-bit?
+    _MODE12 = 1;    // AD1CON1<10> -- 12-bit or 10-bit?
                     // 1=12
-    //_FORM = 0b10;   // AD1CON1<9:8> -- Output format
+    _FORM = 0b00;   // AD1CON1<9:8> -- Output format
                     // 00=Abs decimal, unsigned
                     // 10=Abs fractional, unsigned
-    //_SSRC = 0b0111; // AD1CON1<7:4> -- Sample clock source select
+    _SSRC = 0b0111; // AD1CON1<7:4> -- Sample clock source select
                     // 0111=Auto conversion, internal counter
-    //_ASAM = 1;    // AD1CON1<2> -- When to sample
+    _ASAM = 1;    // AD1CON1<2> -- When to sample
                     // 1=Continuous auto sampling
 
     // AD1CSSL/H registers (22-9 and 22-8)
@@ -203,27 +210,27 @@ void ADConf(void)
     //_CSS12 = 1;     // Turn on AN12 (Pin 15) to sample
 
     // AD1CON2 register (22-2)
-    //_PVCFG = 0;         // AD1CON2<15:14> -- Set positive voltage reference
+    _PVCFG = 0;         // AD1CON2<15:14> -- Set positive voltage reference
                         // 0=Use VDD as positive ref voltage
-    //_NVCFG = 0;         // AD1CON2<13> -- Set negative voltage reference
+    _NVCFG0 = 0;         // AD1CON2<13> -- Set negative voltage reference
                         // 0=Use VSS as negative ref voltage
-    //_BUFREGEN = 1;      // AD1CON2<11> -- A/D buffer register enable?
+    _BUFREGEN = 1;      // AD1CON2<11> -- A/D buffer register enable?
                         // 1=enabled. Results stored using channel indexed
                         // mode -- AN1 result is stored in ADC1BUF1, AN2 result
                         // is stored in ADC1BUF2, etc.
-    //_CSCNA = 1;         // AD1CON2<10> -- Scan inputs?
+    _CSCNA = 0;         // AD1CON2<10> -- Scan inputs?
                         // 1=Scans inputs specified in AD1CSSx registers instead
                         // of using channels specified by CH0SA bits in AD1CHS
-    //_ALTS = 0;          // AD1CON2<0> -- Alternate input sample
+    _ALTS = 0;          // AD1CON2<0> -- Alternate input sample
                         // 0=Sample MUXA only (*not from MUXB)
-    //_SMPI = 0b00010;    // AD1CON2<6:2> -- Sample rate interrupt select
+    _SMPI = 0b00010;    // AD1CON2<6:2> -- Sample rate interrupt select
                         // 00001=Interrupts at the conversion for every 2 samples
 
     // AD1CON3 register (22-3)
-    //_ADRC = 0;          // AD1CON3<15> -- Clock source selection
+    _ADRC = 0;          // AD1CON3<15> -- Clock source selection
                         // 0=Use system clock
-    //_SAMC = 0b00001;    // AD1CON3<12:8> -- Auto-sample time select
+    _SAMC = 0b00001;    // AD1CON3<12:8> -- Auto-sample time select
                         // 00001=Auto sample every A/D period 1*TAD
-    //_ADCS = 0b00111111; // AD1CON3<7:0> -- A/D Conversion clock select
+    _ADCS = 0b00111111; // AD1CON3<7:0> -- A/D Conversion clock select
                         // 00111111=A/D period TAD = 64*TCY
 }

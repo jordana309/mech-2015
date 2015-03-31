@@ -112,8 +112,8 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
  VDD, GND minimum connection*     1 | 28  VDD - Positive Voltage In **
          Limit switch-L           2 | 27  VSS - GND **
          Ultrasonic trigger       3 | 26  RB15 - Out, "Sleep" on motor drivers
-         UART1                    4 | 25  RB14 - Out, Direction to left wheel
-         Ball release solenoid    5 | 24  RB13 - Out, Direction to right wheel
+         UART1                    4 | 25  AN6 - PhotoDiode Input-BR
+         Ball release solenoid    5 | 24  AN7 - PhotoDiode Input-FL
          Rp2 (OC3) shooter motor  6 | 23  RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22  X
  VSS - GND **                     8 | 21  Limit switch-R
@@ -122,7 +122,7 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
                             X    11 | 18  X RB9 - Out, Always Off to M0 setting half step
                             X    12 | 17  CN22   Detect Ultrasonic-R
  VDD - Positive Voltage In **    13 | 16  CN23   Detect Ultrasonic-L
-         PhotoDiode Input-FL     14 | 15  PhotoDiode Input-BR
+ Out, Direction to left wheel    14 | 15  Out, Direction to right wheel
 
     X DON'T WORK AS INPUT PINS
     O WORKS AS INPUT PINS WITH JTAG / 2NDARY OSCILLATOR OFF
@@ -359,58 +359,79 @@ int main()
          *      b) Turn rear to ball corner and back in
          *      c) Check position relative to walls with ultrasound */
 
+//      forward(360);
+//      delay(16000, 1);
+//      backwards(360);
+//      delay(16000, 1);
 
 
+    delay(16000, 1);
     /* 8) Repeat. Main program start. */
     while(1)
     {
-        printFloat(usonicL);
-        UART1PutChar(' ');
-        printFloat(usonicR);
-        UART1PutChar(' ');
-        if(isLimitSwitchLPressed())
-        {
-            UART1PutChar('O');
-            UART1PutChar('N');
-            UART1PutChar('1');
-            UART1PutChar(' ');
-        }
+        //pulseUltra();
 
-        if(isLimitSwitchRPressed())
-        {
-            UART1PutChar('O');
-            UART1PutChar('N');
-            UART1PutChar('2');
-            UART1PutChar(' ');
-        }
-        UART1PutChar('\n');
-        pulseUltra();
+        //Locate IR Beacon
 
-        //turnLeft()
+        turnLeft(360);
+        turnLeft(360);
+        turnLeft(360);
 
-    //Wait until both limit switches are hit
-        while(!isLimitSwitchLPressed() || !isLimitSwitchRPressed())
-        {
-            if(!isLimitSwitchLPressed() && !isLimitSwitchRPressed())
-            {
-                backwards(20);  //Back up (turn wheels 20 degrees)
-            }
-            else if(isLimitSwitchLPressed())
-            {
-                turnLeft(80);
-            }
-            else if(isLimitSwitchRPressed())
-            {
-                turnRight(80);
-            }
+        backwards(360);
+        backwards(360);
+        backwards(360);
+        backwards(360);
+        backwards(360);
+        break;
 
-        }
+//        while(1)
+//        {
+//            turnLeft(90);
+//            printText("Look for IR");
+//            UART1PutChar('\n');
+//
+//            float IRBeacon = checkLIR();
+//
+//            if(IRBeacon > 1.5) //No signal at 0.957
+//            {
+//                break;
+//            }
+//        }
+//
+//        //Wait until both limit switches are hit
+//        while(!isLimitSwitchLPressed() || !isLimitSwitchRPressed())
+//        {
+//            printText("Go to corner");
+//            UART1PutChar('\n');
+//            if(!isLimitSwitchLPressed() && !isLimitSwitchRPressed())
+//            {
+//                backwards(20);  //Back up (turn wheels 20 degrees)
+//            }
+//            else if(isLimitSwitchLPressed())
+//            {
+//                backwards(20);
+//                if(isLimitSwitchRPressed() && isLimitSwitchLPressed())
+//                {
+//                    break;
+//                }
+//                turnLeft(80);
+//            }
+//            else if(isLimitSwitchRPressed())
+//            {
+//                backwards(20);
+//                if(isLimitSwitchRPressed() && isLimitSwitchLPressed())
+//                {
+//                    break;
+//                }
+//                turnRight(80);
+//            }
+//        }
     //Drive to center
-        forward(360);
-        forward(360);
-        forward(360);
-        forward(360);
-        forward(360);
+        //forward(360);
+        //forward(360);
+        //forward(360);
+        //forward(360);
+        //forward(360);
 
         /*forward(360);
         backwards(360);*/
@@ -448,6 +469,7 @@ int main()
          *      b) Turn rear to ball corner and back in
          *      c) Check position relative to walls with ultrasound */
     }
-
+    while(1)
+    {}
     return 0;
 }

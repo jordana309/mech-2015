@@ -18,13 +18,19 @@
 -------------------------------------------------------------------------------------------------*/
 void forward(int deg)
 {
-    LATBbits.LATB13 = 1;  // Switch both directions to be forward
-    LATBbits.LATB14 = 1;
+    printText("Go forward");
+    UART1PutChar('\n');
+    
+    LATBbits.LATB5 = 0;  // Switch both directions to be forward
+    LATBbits.LATB6 = 0;
 
     OC1R = 0.2 * PR2;     // Turn on OC1R, sending pulses to stepper motors
     //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
-    delay((2.0 * deg)/460.8 * PR2, 1); // halt the rest of the program for duration of motion
 
+    //256 (prescale timer 1) * 0.
+
+    delay((int)((2.0 * deg / 460.8) * PR2), 1); // halt the rest of the program for duration of motion
+    
     // Set expected distance to check against ultrasound later
 }
 
@@ -35,12 +41,15 @@ void forward(int deg)
 -------------------------------------------------------------------------------------------------*/
 void backwards(int deg)
 {
-    LATBbits.LATB13 = 0;  // Switch both directions to be forward
-    LATBbits.LATB14 = 0;
+    printText("Go backward");
+    UART1PutChar('\n');
+    
+    LATBbits.LATB5 = 1;  // Switch both directions to be forward
+    LATBbits.LATB6 = 1;
 
     OC1R = 0.2 * PR2;     // Turn on OC1R, sending pulses to stepper motors
     //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
-    delay((2.0 * deg)/460.8 * PR2, 1); // halt the rest of the program for duration of motion
+    delay((int)((2.0 * deg / 460.8) * PR2), 1); // halt the rest of the program for duration of motion
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -51,12 +60,15 @@ void backwards(int deg)
 -------------------------------------------------------------------------------------------------*/
 void turnRight(int deg)   //USES MOTOR DEGREES AT THE MOMENT
 {
-    LATBbits.LATB13 = 1;  // Switch both directions to be forward
-    LATBbits.LATB14 = 0;
+    printText("Turn right");
+    UART1PutChar('\n');
+    
+    LATBbits.LATB5 = 0;  // Switch both directions to be forward
+    LATBbits.LATB6 = 1;
 
     OC1R = 0.2 * PR2;     // Turn on OC1R, sending pulses to stepper motors
     //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
-    delay((2.0 * deg)/460.8 * PR2, 1); // halt the rest of the program for duration of motion
+    delay((int)((2.0 * deg / 460.8) * PR2), 1); // halt the rest of the program for duration of motion
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -67,10 +79,14 @@ void turnRight(int deg)   //USES MOTOR DEGREES AT THE MOMENT
 -------------------------------------------------------------------------------------------------*/
 void turnLeft(int deg)    //USES MOTOR DEGREES AT THE MOMENT
 {
-    LATBbits.LATB13 = 0;  // Switch both directions to be forward
-    LATBbits.LATB14 = 1;
+    printText("Turn left");
+    UART1PutChar('\n');
+    
+    
+    LATBbits.LATB6 = 0;
+    LATBbits.LATB5 = 1;  // Switch both directions to be forward
 
     OC1R = 0.2 * PR2;     // Turn on OC1R, sending pulses to stepper motors
     //Wait until finished turning (1 tic per 1.8 degrees of wheel rotation)
-    delay((2.0 * deg)/460.8 * PR2, 1); // halt the rest of the program for duration of motion
+    delay((int)((2.0 * deg / 460.8) * PR2), 1); // halt the rest of the program for duration of motion
 }

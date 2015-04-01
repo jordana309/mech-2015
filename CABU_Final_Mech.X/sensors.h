@@ -107,10 +107,6 @@ float checkLIR()
     // Pull in current value
     val5 = 3.3 * ADC1BUF7 / 4095.0;
 
-      //printText("LIR: ");
-      //printFloat(val5);
-      //UART1PutChar('\n');
-
     // Calculate average
     float avg = (val1+val2+val3+val4+val5)/5.0;
 

@@ -230,7 +230,7 @@ void _ISR _T1Interrupt(void)
 {
     _T1IF = 0;          // Clear interrupt flag
     _T1IE = 0;          // Disable Timer 1 interrupt
-    OC1R = 0;           // Turn off OC1R, which controls the steppers driving our robot
+    
     processingTask = 0; // Reset flag that tells us if we already have an active driving command
 }
 
@@ -337,6 +337,8 @@ int main()
 {
     /* Intro section - 1) Initial configuration */
 
+    int i;
+
     _RCDIV = 0x0; // No postscaler for oscilator
 
     // Configure PWM, A/D
@@ -366,6 +368,13 @@ int main()
 
 
     delay(16000, 1);
+
+    /*while(1)
+    {
+        rodLeft();
+        rodRight();
+    }*/
+
     /* 8) Repeat. Main program start. */
     while(1)
     {
@@ -373,16 +382,68 @@ int main()
 
         //Locate IR Beacon
 
-        turnLeft(360);
-        turnLeft(360);
-        turnLeft(360);
+        float IRBeacon1;
 
-        backwards(360);
-        backwards(360);
-        backwards(360);
-        backwards(360);
-        backwards(360);
+    //Turn left until we see an IR signal
+        turnLeftUntil();
+
+        printText("Look for IR\n");
+        while(1)
+        {
+            IRBeacon1 = checkLIR();
+
+            if(IRBeacon1 > 2.2) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
+            {
+                stopDriving();
+                break;
+            }
+        }
+        
+    //Back into the corner
+        printText("Go to corner/n");
+        while(1)
+        {
+            backwardUntil();
+            if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            {
+                stopDriving();
+                printText("Both switches pressed\n");
+                break;
+            }
+        }
+        
+    //Move to center of arena
+        printText("Move to center\n");
+        while(1)
+        {
+            forward(360);
+            forward(360);
+            forward(360);
+            forward(360);
+            forward(360);
+            break;
+        }
+
+    //Turn to face Garage
+        printText("Turn to garage\n");
+        turnLeft(360);  //Turns 90 degrees
+
+    //Drive toward Garage
+        printText("Enter garage\n");
+        forward(360);
+        forward(360);
+        forward(360);
+        forward(360);
+
+    //Trigger ball release
+        for(i = 1; i <= 6; i++) //six times
+        {
+            rodLeft();      //Flip out servo
+            rodRight();     //Flip back
+        }
+
         break;
+
 
 //        while(1)
 //        {
@@ -432,10 +493,16 @@ int main()
         //forward(360);
         //forward(360);
         //forward(360);
-
-        /*forward(360);
-        backwards(360);*/
-
+//      while (1){
+//        forward(360);
+//        delay(16000, 1);
+//        backwards(360);
+//        delay(16000, 1);
+//        turnLeft(360);
+//        delay(16000, 1);
+//        turnRight(360);
+//        delay(16000, 1);
+//      }
 
 
         //rodLeft();
@@ -471,5 +538,6 @@ int main()
     }
     while(1)
     {}
+    
     return 0;
 }

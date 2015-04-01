@@ -11,6 +11,14 @@
 #define	SHOOTING_H
 #endif
 
+
+void rodRetract()
+{
+    processingTask = 1;
+    OC2R = 7700;     // Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
+    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
+}
+
 /*-------------------------------------------------------------------------------------------------
  Move rod left - this function flips the beam breaking rod to the left.
  * Called from:

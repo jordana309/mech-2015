@@ -118,7 +118,7 @@ void PWMConf()
     T2CONbits.TCKPS = 0; // Don't prescale100
     TMR2 = 0;            // Timer set to 0
     T2CONbits.TON = 1;   // Timer is on
-    PR2 =  3999;         // Timer period
+    PR2 =  5999;         // Timer period
 
     /* ---- Configure OC2 (Pin 7--RP3)to move servo to break IR beam for ball collection ---- */
 
@@ -184,7 +184,7 @@ void ADConf(void)
     // First, choose pins using AD1CHS register (22-5)
 
     _CH0NA = 0b000;     // Choose GND (pin 20) as negative input
-    _CH0SA = 0b00110; // Choose AN6 (pin 25) as positive input. Less reliable
+    _CH0SA = 0b00111; // Choose AN6 (pin 25) as positive input. Less reliable
                         // than using AD1CSSL/H, so we don't use it
 
     // AD1CON1 register (22-1)

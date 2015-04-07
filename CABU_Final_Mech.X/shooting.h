@@ -52,9 +52,9 @@ void rodRight()
 -------------------------------------------------------------------------------------------------*/
 void startShooting()
 {
-    OC3R = 2000;     // Pulse MOSFET to allow current to motors to launch balls
-    delay(20000, 1); // Wait for 1.25 seconds, halting the rest of the program
-    //OC3R = 0;      // Turn off shooter motors
+    //OC3R = 2000;     // Pulse MOSFET to allow current to motors to launch balls
+    //delay(16000, 1); // Wait for 1 second, halting the rest of the program
+    LATBbits.LATB9 = 1; //Pin 18
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -64,7 +64,8 @@ void startShooting()
 -------------------------------------------------------------------------------------------------*/
 void stopShooting()
 {
-    OC3R = 0;        // Turn off MOSFET feeding shooter motors
+    //OC3R = 0;        // Turn off MOSFET feeding shooter motors
+    LATBbits.LATB9 = 0; //Pin 18
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -74,6 +75,13 @@ void stopShooting()
 void releaseBall()
 {
     LATBbits.LATB15 = 1;     //Open solenoid to release ball
-    delay(1600, 1);        //Wait for 0.1 seconds, halting the rest of the program
+    delay(1280, 1);        //Wait for 0.08 seconds, just enough time to let one ball through
     LATBbits.LATB15 = 0;     //Close solenoid
+}
+
+void shootOnce()
+{
+    OC3R = 2000;     // Pulse MOSFET to allow current to motors to launch balls
+    delay(16000, 1); // Wait for 1 second, halting the rest of the program
+    OC3R = 0;      // Turn off shooter motors
 }

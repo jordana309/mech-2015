@@ -119,7 +119,7 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
  VSS - GND **                     8 | 21  Limit switch-R
                             X     9 | 20  VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19  VBAT
-                            X    11 | 18  X RB9 - Out, Always On to M0 setting half step
+                            X    11 | 18  X RB9 - Out, Always On to M0 setting half step NO NOW THIS IS SHOOTER OUT
                             X    12 | 17  CN22   Detect Ultrasonic-R
  VDD - Positive Voltage In **    13 | 16  CN23   Detect Ultrasonic-L
  Out, Direction to left wheel    14 | 15  Out, Direction to right wheel
@@ -338,6 +338,7 @@ int main()
     /* Intro section - 1) Initial configuration */
 
     int i;
+    int ballsHeld = 0;
 
     _RCDIV = 0x0; // No postscaler for oscilator
 
@@ -361,39 +362,16 @@ int main()
          *      b) Turn rear to ball corner and back in
          *      c) Check position relative to walls with ultrasound */
 
-//      forward(360);
-//      delay(16000, 1);
-//      backwards(360);
-//      delay(16000, 1);
-
-//      while(1)
-//      {
-//          if(isLimitSwitchRPressed())
-//          {
-//              delay(4000, 1);   //Wait a quarter second
-//              releaseBall();
-//          }
-//      }
-//
-//      while(1)
-//      {
-//          printText('Im here!');
-//          if(isLimitSwitchLPressed())
-//              rodLeft();
-//          else if(isLimitSwitchRPressed())
-//              rodRight();
-//          else
-//              rodRetract();
-//      }
-
-
     delay(16000, 1);
 
-    /*while(1)
-    {
-        rodLeft();
-        rodRight();
-    }*/
+//    startShooting();
+//    while(1)
+//    {
+//        //startShooting();
+//        releaseBall();
+//        //stopShooting();
+//        delay(16000, 1);     //Wait .25 secs
+//    }
 
     /* 8) Repeat. Main program start. */
     while(1)
@@ -463,21 +441,71 @@ int main()
                 break;
             }
         }
-        forward(180); //Back up just a smidge
-        backwards(180);
-        forward(180);
-        backwards(180);
-            forward(360);
-            forward(360);
-            forward(360);
-            forward(360);
 
-    //Trigger ball release
-        for(i = 1; i <= 6; i++) //six times
+
+        ballsHeld++;
+        delay(8000, 1);
+        //Back in and out to get balls
+        forward(180); //Back up just a smidge
+        
+
+        backwards(180);
+        ballsHeld++;
+        delay(8000, 1);
+        forward(180);
+        
+
+        backwards(180);
+        delay(8000, 1);
+        ballsHeld++;
+        forward(180);
+        
+
+
+        //Drive back to center of ring
+        forward(180);
+        forward(360);
+        forward(360);
+        forward(360);
+
+        //Turn to face first LED
+        turnLeft(180);
+
+        //Turn left until we see an IR signal
+        turnLeftUntil();
+
+        printText("Look for IR\n");
+        while(1)
         {
-            rodLeft();      //Flip out servo
-            rodRight();     //Flip back
+            IRBeacon1 = checkLIR();
+
+            if(IRBeacon1 > 2.5) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
+            {
+                stopDriving();
+                break;
+            }
         }
+
+        //Turn 180 Deg to face target
+        //turnRight(360);
+        //turnRight(360);
+
+        //Release a ball and shoot it
+        while(ballsHeld > 0)
+        {
+            startShooting();
+            releaseBall();
+            stopShooting();
+            ballsHeld--;
+        }
+
+
+    //Trigger ball release with Solenoid
+//        for(i = 1; i <= 6; i++) //six times
+//        {
+//            rodLeft();      //Flip out servo
+//            rodRight();     //Flip back
+//        }
 
         break;
 

@@ -15,7 +15,7 @@
 void rodRetract()
 {
     processingTask = 1;
-    OC2R = 7700;     // Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
+    OC2R = 2000;     // Set pulse width to 500 microSec (90 deg right)
     delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
 }
 
@@ -26,7 +26,9 @@ void rodRetract()
 void rodLeft()
 {
     processingTask = 1;
-    OC2R = 7700;     // Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
+    OC2R = 8333;        //Set pulse width to 2083 microsec (60 deg left)
+    //OR 9600 TO GET FULL 90 DEG LEFT FOR BIGGER SWEEP
+    //OC2R = 7700;     // Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
     delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
 }
 
@@ -37,7 +39,9 @@ void rodLeft()
 void rodRight()
 {
     processingTask = 1;
-    OC2R = 3900;     // Set pulse width to 975 microSec (45 deg right) //MAY HAVE CHANGED BY x4
+    OC2R = 7065;     // Set pulse width to 1766 microSec (30 deg left)
+    //OR 7700 TO GET 45 DEG LEFT FOR BIGGER SWEEP
+   // OC2R = 3900;     // Set pulse width to 975 microSec (45 deg right)
     delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
 }
 
@@ -69,7 +73,7 @@ void stopShooting()
 -------------------------------------------------------------------------------------------------*/
 void releaseBall()
 {
-    LATBbits.LATB1 = 1;     //Open solenoid to release ball
-    delay(20000, 1);        //Wait for 1.25 seconds, halting the rest of the program
-    LATBbits.LATB1 = 0;     //Close solenoid
+    LATBbits.LATB15 = 1;     //Open solenoid to release ball
+    delay(1600, 1);        //Wait for 0.1 seconds, halting the rest of the program
+    LATBbits.LATB15 = 0;     //Close solenoid
 }

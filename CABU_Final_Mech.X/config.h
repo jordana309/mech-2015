@@ -71,11 +71,15 @@ void PinConf()
     // Initialize pins
     LATBbits.LATB5 = 1; // Initialize WheelR Dir to 0
     LATBbits.LATB6 = 1; // Initialize WheelL Dir to 0
-    LATBbits.LATB15 = 1; // Initialize Sleep to 1 (turns off sleep mode)
-    LATBbits.LATB9 = 1;  // Initialize step size (M0) to half step (Stalls if left unconnected)
-    LATBbits.LATB1 = 0;  // Initialize ball release solenoid to off (out)
+    LATBbits.LATB15 = 0; // Ball Release Solenoid
+    //LATBbits.LATB9 = 1;  // Initialize step size (M0) to half step (Stalls if left unconnected)
+    LATBbits.LATB1 = 1;  // Initialize ball release solenoid to off (out)
     LATBbits.LATB5 = 1;
     LATBbits.LATB6 = 1;
+
+    //LATAbits.LATA2 = 1;
+    //LATAbits.LATA3 = 1;
+    //LATAbits. = 1;
 
     // Configure CN interrupt
     _CN23IE = 1;  // Enable CN on pin 16 (CNEN1 register)

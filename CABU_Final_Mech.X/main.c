@@ -109,17 +109,17 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
  * Called from main() intro section.
  REF: Pin Diagram (p3), 2.0 (minimum connections, p21)
 
- VDD, GND minimum connection*     1 | 28  VDD - Positive Voltage In **
+ VDD, GND minimum connection*     1 | 28  VDD - Positive Voltage In ** //Sleep and M0
          Limit switch-L           2 | 27  VSS - GND **
-         Ultrasonic trigger       3 | 26  RB15 - Out, "Sleep" on motor drivers
+         Ultrasonic trigger       3 | 26  RB15 - Ball release Solenoid
          UART1                    4 | 25  AN6 - PhotoDiode Input-BR
-         Ball release solenoid    5 | 24  AN7 - PhotoDiode Input-FL
+        Only 1V output???? XXX    5 | 24  AN7 - PhotoDiode Input-FL
          Rp2 (OC3) shooter motor  6 | 23  RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22  X
  VSS - GND **                     8 | 21  Limit switch-R
                             X     9 | 20  VCAP*** - Connected by 10uF Cap to GND
-                            X    10 | 19
-                            X    11 | 18  X RB9 - Out, Always Off to M0 setting half step
+                            X    10 | 19  VBAT
+                            X    11 | 18  X RB9 - Out, Always On to M0 setting half step
                             X    12 | 17  CN22   Detect Ultrasonic-R
  VDD - Positive Voltage In **    13 | 16  CN23   Detect Ultrasonic-L
  Out, Direction to left wheel    14 | 15  Out, Direction to right wheel
@@ -366,6 +366,26 @@ int main()
 //      backwards(360);
 //      delay(16000, 1);
 
+//      while(1)
+//      {
+//          if(isLimitSwitchRPressed())
+//          {
+//              delay(4000, 1);   //Wait a quarter second
+//              releaseBall();
+//          }
+//      }
+//
+//      while(1)
+//      {
+//          printText('Im here!');
+//          if(isLimitSwitchLPressed())
+//              rodLeft();
+//          else if(isLimitSwitchRPressed())
+//              rodRight();
+//          else
+//              rodRetract();
+//      }
+
 
     delay(16000, 1);
 
@@ -401,13 +421,14 @@ int main()
         
     //Back into the corner
         printText("Go to corner/n");
+        backwardUntil();
         while(1)
         {
-            backwardUntil();
             if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
             {
                 stopDriving();
                 printText("Both switches pressed\n");
+                delay(8000, 1); //Wait half a second for us to see it stopped
                 break;
             }
         }
@@ -420,20 +441,36 @@ int main()
             forward(360);
             forward(360);
             forward(360);
-            forward(360);
+            //forward(360);
             break;
         }
 
     //Turn to face Garage
         printText("Turn to garage\n");
-        turnLeft(360);  //Turns 90 degrees
+        turnRight(360);  //Turns 90 degrees
 
     //Drive toward Garage
         printText("Enter garage\n");
-        forward(360);
-        forward(360);
-        forward(360);
-        forward(360);
+        backwardUntil();
+        while(1)
+        {
+            if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            {
+                stopDriving();
+                printText("Both switches pressed\n");
+                printText("In garage corner!\n");
+                delay(8000, 1); //Wait half a second for us to see it stopped
+                break;
+            }
+        }
+        forward(180); //Back up just a smidge
+        backwards(180);
+        forward(180);
+        backwards(180);
+            forward(360);
+            forward(360);
+            forward(360);
+            forward(360);
 
     //Trigger ball release
         for(i = 1; i <= 6; i++) //six times

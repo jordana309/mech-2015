@@ -99,6 +99,11 @@ void turnLeft(int deg)    //USES MOTOR DEGREES AT THE MOMENT
     OC1R = 0;           // Turn off OC1R, which controls the steppers driving our robot
 }
 
+void startDriving()
+{
+    OC1R = 0.2 * PR2;
+}
+
 void stopDriving()
 {
     printText("Stop driving\n");

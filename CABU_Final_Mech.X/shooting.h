@@ -52,9 +52,8 @@ void rodRight()
 -------------------------------------------------------------------------------------------------*/
 void startShooting()
 {
-    //OC3R = 2000;     // Pulse MOSFET to allow current to motors to launch balls
-    //delay(16000, 1); // Wait for 1 second, halting the rest of the program
     LATBbits.LATB9 = 1; //Pin 18
+    delay(8000, 1);     //Wait 0.5 seconds to get motor spinning up
 }
 
 /*-------------------------------------------------------------------------------------------------

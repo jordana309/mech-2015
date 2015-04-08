@@ -126,6 +126,17 @@ float checkLIR()
     return(avg);
 }
 
+float checkLIR5()
+{
+    int i;
+    float result;
+    for(i = 0; i < 5; i++)
+    {
+        result = checkLIR();
+    }
+    return result;
+}
+
 /*-------------------------------------------------------------------------------------------------
  Check right IR - Read from the IR sensor 5 times, and average the values. This is essentially a
     digital filter to clean up the noise on the IR line. After, cycle the variables so that a

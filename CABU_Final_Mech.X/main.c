@@ -119,7 +119,7 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
  VSS - GND **                     8 | 21  Limit switch-R
                             X     9 | 20  VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19  VBAT
-                            X    11 | 18  X RB9 - Out, Always On to M0 setting half step NO NOW THIS IS SHOOTER OUT
+                            X    11 | 18  X RB9 - NOW THIS IS SHOOTER OUT
                             X    12 | 17  CN22   Detect Ultrasonic-R
  VDD - Positive Voltage In **    13 | 16  CN23   Detect Ultrasonic-L
  Out, Direction to left wheel    14 | 15  Out, Direction to right wheel
@@ -330,6 +330,180 @@ void _ISR _CNInterrupt(void)
     // After final goal time expires, it will command the bot to do something fun/funny (like bowing)
 }*/
 
+void firstOrientation()
+{
+    float IRBeacon1;
+
+//Turn left until we see an IR signal
+    turnLeftUntil();
+
+    printText("Look for IR\n");
+    while(1)
+    {
+        IRBeacon1 = checkLIR();
+
+        if(IRBeacon1 > 2.2) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
+        {
+            stopDriving();
+            break;
+        }
+    }
+
+//Back into the corner
+    printText("Go to corner/n");
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+        {
+            stopDriving();
+            printText("Both switches pressed\n");
+            delay(8000, 1); //Wait half a second for us to see it stopped
+            break;
+        }
+    }
+
+//Move to center of arena
+    printText("Move to center\n");
+    forward(360);
+    forward(360);
+    forward(360);
+    forward(360);
+}
+
+int findGarage(int currentTarget)
+{
+//Turn to face Garage
+    printText("Turn to garage\n");
+    startDriving();
+//Turn to face first next target
+    if(currentTarget == 1)
+    {
+        turnRight(360);
+    }
+    else if(currentTarget == 2)
+    {
+        turnRight(360);
+        turnRight(360);
+    }
+    else if(currentTarget == 3)
+    {
+        turnLeft(360);
+    }
+    else if(currentTarget == 0)
+    {
+        //This should never happen
+        turnRight(360);
+        turnRight(360);
+        turnRight(360);
+        turnRight(360);
+    }
+
+//Drive toward Garage
+    printText("Enter garage\n");
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+        {
+            stopDriving();
+            printText("Both switches pressed\n");
+            printText("In garage corner!\n");
+            delay(8000, 1); //Wait half a second for us to see it stopped
+            break;
+        }
+    }
+    delay(8000, 1); //Wait for ball to drop
+
+    return 0;
+}
+
+void collect6Balls()
+{
+    forward(180); //Back up just a smidge
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            break;
+    }
+    stopDriving();
+    delay(8000, 1); //Wait for ball to drop
+
+    forward(180); //Back up just a smidge
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            break;
+    }
+    stopDriving();
+    delay(8000, 1); //Wait for ball to drop
+
+    forward(180); //Back up just a smidge
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            break;
+    }
+    stopDriving();
+    delay(8000, 1); //Wait for ball to drop
+
+    forward(180); //Back up just a smidge
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            break;
+    }
+    stopDriving();
+    delay(8000, 1); //Wait for ball to drop
+
+    forward(180); //Back up just a smidge
+    backwardUntil();
+    while(1)
+    {
+        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+            break;
+    }
+    stopDriving();
+    delay(8000, 1); //Wait for ball to drop
+
+//Move to center of arena
+    printText("Move to center\n");
+    forward(360);
+    forward(360);
+    forward(360);
+    forward(360);
+}
+
+int findNextTarget(int currentTarget)
+{
+//Turn to face first next target
+    if(currentTarget == 0)
+    {
+        turnLeft(360);
+        return 1;
+    }
+    else if(currentTarget == 1)
+    {
+        turnLeft(360);
+        return 2;
+    }
+    else if(currentTarget == 2)
+    {
+        turnLeft(360);
+        return 3;
+    }
+    else if(currentTarget == 3)
+    {
+        turnRight(360);
+        turnRight(360);
+        return 1;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Main function - this is the primary code of the project. This calls/sets up all functions above.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -339,6 +513,8 @@ int main()
 
     int i;
     int ballsHeld = 0;
+    int currentTarget = 3;      //counter-clockwise from garage, 0 = garage, 1 = right, 2 = middle, 3 = left
+    float IRBeacon1;
 
     _RCDIV = 0x0; // No postscaler for oscilator
 
@@ -351,7 +527,56 @@ int main()
       UART1Config();
     #endif
 
-    /* 2) Orientation in the first 5 seconds
+    startShooting();
+    while(1)
+    {
+        releaseBall();
+        delay(16000, 1);     //Wait .25 secs
+    }
+
+/* 8) Repeat. Main program start. */
+    delay(16000, 1);
+
+    firstOrientation();             //Find LED signal, bump into wall, move to center
+
+    while(1)
+    {
+    //Out of balls.  Get more.      Otherwise just go to next target in next loop
+        if(ballsHeld == 0)
+        {
+            currentTarget = findGarage(currentTarget);   //Go to garage
+            collect6Balls();                //Collect rest of balls, move back to center
+            ballsHeld += 6;
+        }
+
+        currentTarget = findNextTarget(currentTarget);  //Find next target
+
+        IRBeacon1 = checkLIR5();
+        if(IRBeacon1 > 2.5) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
+        {
+            //Shoot until you run out of balls or target changes
+            startShooting();
+            while(ballsHeld > 0)
+            {
+                releaseBall();
+                ballsHeld--;
+                IRBeacon1 = checkLIR5();
+                if(IRBeacon1 < 1.6)         //Target moved!
+                {
+                    break;
+                }
+            }
+            stopShooting();
+        }
+    }
+
+    //After program exist, just sit until we flip the off switch
+    while(1)
+    {}
+    
+    return 0;
+}
+        /* 2) Orientation in the first 5 seconds
          *      a) Rotate until positioning LED at "max"
          *      b) Back into the corner
          *      c) Detect contact on both touch sensors
@@ -361,219 +586,6 @@ int main()
          *      a) Move forward to center(ish)
          *      b) Turn rear to ball corner and back in
          *      c) Check position relative to walls with ultrasound */
-
-    delay(16000, 1);
-
-//    startShooting();
-//    while(1)
-//    {
-//        //startShooting();
-//        releaseBall();
-//        //stopShooting();
-//        delay(16000, 1);     //Wait .25 secs
-//    }
-
-    /* 8) Repeat. Main program start. */
-    while(1)
-    {
-        //pulseUltra();
-
-        //Locate IR Beacon
-
-        float IRBeacon1;
-
-    //Turn left until we see an IR signal
-        turnLeftUntil();
-
-        printText("Look for IR\n");
-        while(1)
-        {
-            IRBeacon1 = checkLIR();
-
-            if(IRBeacon1 > 2.2) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
-            {
-                stopDriving();
-                break;
-            }
-        }
-        
-    //Back into the corner
-        printText("Go to corner/n");
-        backwardUntil();
-        while(1)
-        {
-            if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            {
-                stopDriving();
-                printText("Both switches pressed\n");
-                delay(8000, 1); //Wait half a second for us to see it stopped
-                break;
-            }
-        }
-        
-    //Move to center of arena
-        printText("Move to center\n");
-        while(1)
-        {
-            forward(360);
-            forward(360);
-            forward(360);
-            forward(360);
-            //forward(360);
-            break;
-        }
-
-    //Turn to face Garage
-        printText("Turn to garage\n");
-        turnRight(360);  //Turns 90 degrees
-
-    //Drive toward Garage
-        printText("Enter garage\n");
-        backwardUntil();
-        while(1)
-        {
-            if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            {
-                stopDriving();
-                printText("Both switches pressed\n");
-                printText("In garage corner!\n");
-                delay(8000, 1); //Wait half a second for us to see it stopped
-                break;
-            }
-        }
-
-
-        ballsHeld++;
-        delay(8000, 1);
-        //Back in and out to get balls
-        forward(180); //Back up just a smidge
-        
-
-        backwards(180);
-        ballsHeld++;
-        delay(8000, 1);
-        forward(180);
-        
-
-        backwards(180);
-        delay(8000, 1);
-        ballsHeld++;
-        forward(180);
-        
-
-
-        //Drive back to center of ring
-        forward(180);
-        forward(360);
-        forward(360);
-        forward(360);
-
-        //Turn to face first LED
-        turnLeft(180);
-
-        //Turn left until we see an IR signal
-        turnLeftUntil();
-
-        printText("Look for IR\n");
-        while(1)
-        {
-            IRBeacon1 = checkLIR();
-
-            if(IRBeacon1 > 2.5) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
-            {
-                stopDriving();
-                break;
-            }
-        }
-
-        //Turn 180 Deg to face target
-        //turnRight(360);
-        //turnRight(360);
-
-        //Release a ball and shoot it
-        while(ballsHeld > 0)
-        {
-            startShooting();
-            releaseBall();
-            stopShooting();
-            ballsHeld--;
-        }
-
-
-    //Trigger ball release with Solenoid
-//        for(i = 1; i <= 6; i++) //six times
-//        {
-//            rodLeft();      //Flip out servo
-//            rodRight();     //Flip back
-//        }
-
-        break;
-
-
-//        while(1)
-//        {
-//            turnLeft(90);
-//            printText("Look for IR");
-//            UART1PutChar('\n');
-//
-//            float IRBeacon = checkLIR();
-//
-//            if(IRBeacon > 1.5) //No signal at 0.957
-//            {
-//                break;
-//            }
-//        }
-//
-//        //Wait until both limit switches are hit
-//        while(!isLimitSwitchLPressed() || !isLimitSwitchRPressed())
-//        {
-//            printText("Go to corner");
-//            UART1PutChar('\n');
-//            if(!isLimitSwitchLPressed() && !isLimitSwitchRPressed())
-//            {
-//                backwards(20);  //Back up (turn wheels 20 degrees)
-//            }
-//            else if(isLimitSwitchLPressed())
-//            {
-//                backwards(20);
-//                if(isLimitSwitchRPressed() && isLimitSwitchLPressed())
-//                {
-//                    break;
-//                }
-//                turnLeft(80);
-//            }
-//            else if(isLimitSwitchRPressed())
-//            {
-//                backwards(20);
-//                if(isLimitSwitchRPressed() && isLimitSwitchLPressed())
-//                {
-//                    break;
-//                }
-//                turnRight(80);
-//            }
-//        }
-    //Drive to center
-        //forward(360);
-        //forward(360);
-        //forward(360);
-        //forward(360);
-        //forward(360);
-//      while (1){
-//        forward(360);
-//        delay(16000, 1);
-//        backwards(360);
-//        delay(16000, 1);
-//        turnLeft(360);
-//        delay(16000, 1);
-//        turnRight(360);
-//        delay(16000, 1);
-//      }
-
-
-        //rodLeft();
-        //rodRight();
-        //shootBall();
-        //releaseBall();
 
         /* 4) Ball collection
          *      a) Flip out paddle
@@ -600,9 +612,3 @@ int main()
          *      a) Move forward to center(ish)
          *      b) Turn rear to ball corner and back in
          *      c) Check position relative to walls with ultrasound */
-    }
-    while(1)
-    {}
-    
-    return 0;
-}

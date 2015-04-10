@@ -142,19 +142,21 @@ void PWMConf()
 
     /* ---- Configure OC3 (Pin 22--RP11) to turn the shooter motors on with a MOSFET ---- */
 
-    OC3CON1 = 0;    // Clear OC3 configuration bits
-    OC3CON2 = 0;    // Clear OC3 configuration bits
-    OC3CON1bits.OCTSEL = 0b001;     // Set it to use timer 3. Sets base for period.
-    OC3CON2bits.SYNCSEL = 0b01101;  // Set sync select to timer 3. Sets comparisons and the "beat".
-    OC3CON1bits.OCM = 0b110;        // Edge-Aligned PWM mode
-    OC3R = 2000;    // Initialize with duty cycle of 50%
+//    OC3CON1 = 0;    // Clear OC3 configuration bits
+//    OC3CON2 = 0;    // Clear OC3 configuration bits
+//    OC3CON1bits.OCTSEL = 0b001;     // Set it to use timer 3. Sets base for period.
+//    OC3CON2bits.SYNCSEL = 0b01101;  // Set sync select to timer 3. Sets comparisons and the "beat".
+//    OC3CON1bits.OCM = 0b110;        // Edge-Aligned PWM mode
+//    OC3R = 2000;    // Initialize with duty cycle of 50%
 
-    // Set up Timer 3
+    // Set up Timer 3 for TOTAL TIME CLOCK
     T3CONbits.TCS = 0;   // Internal clock
-    T3CONbits.TCKPS = 0; // Don't prescale100
+    T3CONbits.TCKPS = 0b11; // Prescale by 256
     TMR3 = 0;            // Timer set to 0
+    PR3 = 16000;          // Timer period (should trigger once per second)
+    _T3IE = 0;          //Enable T1 Interrupt
+    _T3IF = 0;          //Disable T1 Interrupt Flag
     T3CONbits.TON = 1;   // Timer is on
-    PR3 = 4999;          // Timer period
 
     /* ---- Configure other timers that we use ---- */
 

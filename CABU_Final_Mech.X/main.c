@@ -75,6 +75,7 @@ volatile int processingTask = 0;
 volatile int waitingUS = 0;
 volatile float usonicL = 0; // Value read from the left Ultrasonic
 volatile float usonicR = 0; // Value read from the right Ultrasonic
+volatile int timeRunning = 0;
 
 /*-------------------------------------------------------------------------------------------------
  0c) Microprocessor configuration - Set our 4 configuraion registers (Con Words).
@@ -232,6 +233,13 @@ void _ISR _T1Interrupt(void)
     _T1IE = 0;          // Disable Timer 1 interrupt
     
     processingTask = 0; // Reset flag that tells us if we already have an active driving command
+}
+
+void _ISR _T2Interrupt(void)
+{
+    _T2IF = 0;          // Clear interrupt flag
+
+    timeRunning++; // Reset flag that tells us if we already have an active driving command
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -544,9 +552,16 @@ int main()
     //Out of balls.  Get more.      Otherwise just go to next target in next loop
         if(ballsHeld == 0)
         {
-            currentTarget = findGarage(currentTarget);   //Go to garage
-            collect6Balls();                //Collect rest of balls, move back to center
-            ballsHeld += 6;
+            if(timeRunning < 95)    //If we still have 10 seconds left, might as well get some balls
+            {
+                currentTarget = findGarage(currentTarget);   //Go to garage
+                collect6Balls();                //Collect rest of balls, move back to center
+                ballsHeld += 6;
+            }
+            else                    //Otherwise, we are about out of time so just stay in the middle
+            {
+                break;
+            }
         }
 
         currentTarget = findNextTarget(currentTarget);  //Find next target
@@ -558,16 +573,18 @@ int main()
             startShooting();
             while(ballsHeld > 0)
             {
-                releaseBall();
-                ballsHeld--;
-                IRBeacon1 = checkLIR5();
-                if(IRBeacon1 < 1.6)         //Target moved!
+                if(IRBeacon1 < 1.6 || timeRunning > 102)         //Target moved or time us up
                 {
                     break;
                 }
+                releaseBall();
+                ballsHeld--;
+                IRBeacon1 = checkLIR5();
             }
             stopShooting();
         }
+        if(timeRunning > 102)   //Time is up.  Stop looping
+            break;
     }
 
     //After program exist, just sit until we flip the off switch

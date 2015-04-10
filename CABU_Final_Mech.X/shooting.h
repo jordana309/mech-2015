@@ -53,7 +53,7 @@ void rodRight()
 void startShooting()
 {
     LATBbits.LATB9 = 1; //Pin 18
-    delay(8000, 1);     //Wait 0.5 seconds to get motor spinning up
+    delay(16000, 1);     //Wait 1 seconds to get motor spinning up
 }
 
 /*-------------------------------------------------------------------------------------------------

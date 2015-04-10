@@ -375,7 +375,7 @@ int findGarage(int currentTarget)
 {
 //Turn to face Garage
     printText("Turn to garage\n");
-    startDriving();
+    turnRight(15);
 //Turn to face first next target
     if(currentTarget == 1)
     {
@@ -527,12 +527,12 @@ int main()
       UART1Config();
     #endif
 
-    startShooting();
-    while(1)
-    {
-        releaseBall();
-        delay(16000, 1);     //Wait .25 secs
-    }
+//    startShooting();
+//    while(1)
+//    {
+//        releaseBall();
+//        delay(16000, 1);     //Wait .25 secs
+//    }
 
 /* 8) Repeat. Main program start. */
     delay(16000, 1);

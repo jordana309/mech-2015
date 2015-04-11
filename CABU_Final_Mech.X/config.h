@@ -154,7 +154,7 @@ void PWMConf()
     T3CONbits.TCKPS = 0b11; // Prescale by 256
     TMR3 = 0;            // Timer set to 0
     PR3 = 16000;          // Timer period (should trigger once per second)
-    _T3IE = 0;          //Enable T1 Interrupt
+    _T3IE = 1;          //Enable T1 Interrupt
     _T3IF = 0;          //Disable T1 Interrupt Flag
     T3CONbits.TON = 1;   // Timer is on
 

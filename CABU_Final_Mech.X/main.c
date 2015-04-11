@@ -115,12 +115,12 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
          Ultrasonic trigger       3 | 26  RB15 - Ball release Solenoid
          UART1                    4 | 25  AN6 - PhotoDiode Input-BR
         Only 1V output???? XXX    5 | 24  AN7 - PhotoDiode Input-FL
-         Rp2 (OC3) shooter motor  6 | 23  RB12 - PWM for step output, mapped to OC1.
+                                  6 | 23  RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22  X
  VSS - GND **                     8 | 21  Limit switch-R
                             X     9 | 20  VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19  VBAT
-                            X    11 | 18  X RB9 - NOW THIS IS SHOOTER OUT
+                            X    11 | 18  X RB9 - Shooter motor out - triggers H-Bridge
                             X    12 | 17  CN22   Detect Ultrasonic-R
  VDD - Positive Voltage In **    13 | 16  CN23   Detect Ultrasonic-L
  Out, Direction to left wheel    14 | 15  Out, Direction to right wheel
@@ -235,9 +235,9 @@ void _ISR _T1Interrupt(void)
     processingTask = 0; // Reset flag that tells us if we already have an active driving command
 }
 
-void _ISR _T2Interrupt(void)
+void _ISR _T3Interrupt(void)
 {
-    _T2IF = 0;          // Clear interrupt flag
+    _T3IF = 0;          // Clear interrupt flag
 
     timeRunning++; // Reset flag that tells us if we already have an active driving command
 }
@@ -417,18 +417,19 @@ int findGarage(int currentTarget)
             stopDriving();
             printText("Both switches pressed\n");
             printText("In garage corner!\n");
-            delay(8000, 1); //Wait half a second for us to see it stopped
             break;
         }
     }
-    delay(8000, 1); //Wait for ball to drop
+    //delay(8000, 1); //Wait for ball to drop
 
     return 0;
 }
 
 void collect6Balls()
 {
+    forward(15);
     forward(180); //Back up just a smidge
+    delay(8000, 1); //Wait for ball to drop
     backwardUntil();
     while(1)
     {
@@ -436,9 +437,10 @@ void collect6Balls()
             break;
     }
     stopDriving();
-    delay(8000, 1); //Wait for ball to drop
+    
 
     forward(180); //Back up just a smidge
+    delay(8000, 1); //Wait for ball to drop
     backwardUntil();
     while(1)
     {
@@ -446,9 +448,9 @@ void collect6Balls()
             break;
     }
     stopDriving();
-    delay(8000, 1); //Wait for ball to drop
 
     forward(180); //Back up just a smidge
+    delay(8000, 1); //Wait for ball to drop
     backwardUntil();
     while(1)
     {
@@ -456,9 +458,9 @@ void collect6Balls()
             break;
     }
     stopDriving();
-    delay(8000, 1); //Wait for ball to drop
 
     forward(180); //Back up just a smidge
+    delay(8000, 1); //Wait for ball to drop
     backwardUntil();
     while(1)
     {
@@ -466,9 +468,9 @@ void collect6Balls()
             break;
     }
     stopDriving();
-    delay(8000, 1); //Wait for ball to drop
 
     forward(180); //Back up just a smidge
+    delay(8000, 1); //Wait for ball to drop
     backwardUntil();
     while(1)
     {
@@ -476,7 +478,6 @@ void collect6Balls()
             break;
     }
     stopDriving();
-    delay(8000, 1); //Wait for ball to drop
 
 //Move to center of arena
     printText("Move to center\n");
@@ -578,7 +579,8 @@ int main()
                     break;
                 }
                 releaseBall();
-                ballsHeld--;
+                ballsHeld -= 1;
+                delay(16000, 1);
                 IRBeacon1 = checkLIR5();
             }
             stopShooting();

@@ -444,57 +444,25 @@ int findGarage(int currentTarget)
 void collect6Balls()
 {
     forward(15); // It often ignores the first move command, so we tell it to move a baby bit
-    forward(180); //Back up just a smidge
-    delay(8000, 1); //Wait for ball to drop
-    backwardUntil();
-    while(1)
-    {
-        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            break;
-    }
-    stopDriving();
     
-    forward(180); //Back up just a smidge
-    delay(8000, 1); //Wait for ball to drop
-    backwardUntil();
-    while(1)
+    
+    for(int j=1; j<6; j++)
     {
-        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            break;
+        forward(180); //Back up just a smidge
+        delay(8000, 1); //Wait for ball to drop
+        backwardUntil();
+        while(1)
+        {
+            if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
+                break;
+        }
+        stopDriving();
     }
-    stopDriving();
+// These two lines may be different and we may need to add them again.
+//    forward(180);   //Back up just a smidge
+//    delay(8000, 1); //Wait for ball to drop
 
-    forward(180); //Back up just a smidge
-    delay(8000, 1); //Wait for ball to drop
-    backwardUntil();
-    while(1)
-    {
-        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            break;
-    }
-    stopDriving();
-
-    forward(180); //Back up just a smidge
-    delay(8000, 1); //Wait for ball to drop
-    backwardUntil();
-    while(1)
-    {
-        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            break;
-    }
-    stopDriving();
-
-    forward(180); //Back up just a smidge
-    delay(8000, 1); //Wait for ball to drop
-    backwardUntil();
-    while(1)
-    {
-        if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
-            break;
-    }
-    stopDriving();
-
-//Move to center of arena
+    //Move to center of arena
     #ifdef TESTING
       printText("Move to center\n");
     #endif

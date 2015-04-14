@@ -479,9 +479,12 @@ void collect6Balls()
     }
     stopDriving();
 
+    forward(180); //Back up just a smidge
+    delay(8000, 1); //Wait for ball to drop
+
 //Move to center of arena
     printText("Move to center\n");
-    forward(360);
+    forward(180);
     forward(360);
     forward(360);
     forward(360);
@@ -570,6 +573,7 @@ int main()
         IRBeacon1 = checkLIR5();
         if(IRBeacon1 > 2.5) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
         {
+            backwards(360);
             //Shoot until you run out of balls or target changes
             startShooting();
             while(ballsHeld > 0)
@@ -584,6 +588,7 @@ int main()
                 IRBeacon1 = checkLIR5();
             }
             stopShooting();
+            forward(360);
         }
         if(timeRunning > 102)   //Time is up.  Stop looping
             break;

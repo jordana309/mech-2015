@@ -61,7 +61,7 @@
      bluetooth. To use this, wrap the necessary code between #ifdef VAR and #endif.
 -------------------------------------------------------------------------------------------------*/
 // Wraps all code that we need for testing, and allows removal when unneeded.
-#define TESTING
+#define NOTTESTING
 #ifdef TESTING
 /* Puts in all our debugging coded. Functions included:
  * UART1CONFIG */
@@ -75,7 +75,8 @@ volatile int processingTask = 0;
 volatile int waitingUS = 0;
 volatile float usonicL = 0; // Value read from the left Ultrasonic
 volatile float usonicR = 0; // Value read from the right Ultrasonic
-volatile int timeRunning = 0;
+volatile int timeRunning = 0; // Times the entire round
+volatile int timePassed = 0; // Used for timing when driving into the garage.
 
 /*-------------------------------------------------------------------------------------------------
  0c) Microprocessor configuration - Set our 4 configuraion registers (Con Words).
@@ -115,9 +116,9 @@ _CONFIG2(POSCMD_HS && OSCIOFCN_ON);
          Ultrasonic trigger       3 | 26  RB15 - Ball release Solenoid
          UART1                    4 | 25  AN6 - PhotoDiode Input-BR
         Only 1V output???? XXX    5 | 24  AN7 - PhotoDiode Input-FL
-                                  6 | 23  RB12 - PWM for step output, mapped to OC1.
+          RB2 - Limit switch-R    6 | 23  RB12 - PWM for step output, mapped to OC1.
          Rp3 (OC2) servo rod      7 | 22  X
- VSS - GND **                     8 | 21  Limit switch-R
+ VSS - GND **                     8 | 21  X Doesn't seem to read the limit switch 
                             X     9 | 20  VCAP*** - Connected by 10uF Cap to GND
                             X    10 | 19  VBAT
                             X    11 | 18  X RB9 - Shooter motor out - triggers H-Bridge
@@ -239,7 +240,8 @@ void _ISR _T3Interrupt(void)
 {
     _T3IF = 0;          // Clear interrupt flag
 
-    timeRunning++; // Reset flag that tells us if we already have an active driving command
+    timeRunning++; // Add one to the total game counter
+    timePassed++; // Add plus one to timePassed, used when going into the garage
 }
 
 /*-------------------------------------------------------------------------------------------------
@@ -344,13 +346,14 @@ void firstOrientation()
 
 //Turn left until we see an IR signal
     turnLeftUntil();
-
-    printText("Look for IR\n");
+    #ifdef TESTING
+      printText("Look for IR\n");
+    #endif
     while(1)
     {
         IRBeacon1 = checkLIR();
 
-        if(IRBeacon1 > 2.2) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
+        if(IRBeacon1 > 2.0) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
         {
             stopDriving();
             break;
@@ -358,21 +361,27 @@ void firstOrientation()
     }
 
 //Back into the corner
-    printText("Go to corner/n");
+    #ifdef TESTING
+      printText("Go to corner/n");
+    #endif
     backwardUntil();
     while(1)
     {
         if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
         {
             stopDriving();
-            printText("Both switches pressed\n");
+            #ifdef TESTING
+              printText("Both switches pressed\n");
+            #endif
             delay(8000, 1); //Wait half a second for us to see it stopped
             break;
         }
     }
 
 //Move to center of arena
-    printText("Move to center\n");
+    #ifdef TESTING
+      printText("Move to center\n");
+    #endif
     forward(360);
     forward(360);
     forward(360);
@@ -382,7 +391,9 @@ void firstOrientation()
 int findGarage(int currentTarget)
 {
 //Turn to face Garage
-    printText("Turn to garage\n");
+    #ifdef TESTING
+      printText("Turn to garage\n");
+    #endif
     turnRight(15);
 //Turn to face first next target
     if(currentTarget == 1)
@@ -408,15 +419,20 @@ int findGarage(int currentTarget)
     }
 
 //Drive toward Garage
-    printText("Enter garage\n");
+    #ifdef TESTING
+      printText("Enter garage\n");
+    #endif
     backwardUntil();
     while(1)
     {
+        timePassed = 0;
         if(isLimitSwitchLPressed() && isLimitSwitchRPressed())
         {
             stopDriving();
-            printText("Both switches pressed\n");
-            printText("In garage corner!\n");
+            #ifdef TESTING
+              printText("Both switches pressed\n");
+              printText("In garage corner!\n");
+            #endif
             break;
         }
     }
@@ -427,7 +443,7 @@ int findGarage(int currentTarget)
 
 void collect6Balls()
 {
-    forward(15);
+    forward(15); // It often ignores the first move command, so we tell it to move a baby bit
     forward(180); //Back up just a smidge
     delay(8000, 1); //Wait for ball to drop
     backwardUntil();
@@ -438,7 +454,6 @@ void collect6Balls()
     }
     stopDriving();
     
-
     forward(180); //Back up just a smidge
     delay(8000, 1); //Wait for ball to drop
     backwardUntil();
@@ -478,42 +493,35 @@ void collect6Balls()
             break;
     }
     stopDriving();
-
-    forward(180); //Back up just a smidge
-    delay(8000, 1); //Wait for ball to drop
 
 //Move to center of arena
-    printText("Move to center\n");
-    forward(180);
+    #ifdef TESTING
+      printText("Move to center\n");
+    #endif
     forward(360);
     forward(360);
     forward(360);
-}
+    forward(360);
+    }
 
 int findNextTarget(int currentTarget)
 {
 //Turn to face first next target
     if(currentTarget == 0)
     {
-        turnLeft(360);
+        turnLeft(350);
         return 1;
-    }
-    else if(currentTarget == 1)
-    {
-        turnLeft(360);
+    } else if(currentTarget == 1) {
+        turnLeft(350);
         return 2;
-    }
-    else if(currentTarget == 2)
-    {
-        turnLeft(360);
+    } else if(currentTarget == 2) {
+        turnLeft(350);
         return 3;
-    }
-    else if(currentTarget == 3)
-    {
-        turnRight(360);
-        turnRight(360);
+    } else { //(currentTarget == 3)
+        turnRight(350);
+        turnRight(350);
         return 1;
-    }
+    } 
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -524,9 +532,9 @@ int main()
     /* Intro section - 1) Initial configuration */
 
     int i;
-    int ballsHeld = 0;
+    int ballsHeld = 0;          // Keep track of how many balls we have in the hopper
     int currentTarget = 3;      //counter-clockwise from garage, 0 = garage, 1 = right, 2 = middle, 3 = left
-    float IRBeacon1;
+    float IRBeacon1;            // The value of the IR Sensor
 
     _RCDIV = 0x0; // No postscaler for oscilator
 
@@ -571,10 +579,10 @@ int main()
         currentTarget = findNextTarget(currentTarget);  //Find next target
 
         IRBeacon1 = checkLIR5();
-        if(IRBeacon1 > 2.5) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
+        if(IRBeacon1 > 2.0) //No signal at 0.95-sh.  2.7 in middle of ring, 2.2 at opposite end
         {
-            backwards(360);
             //Shoot until you run out of balls or target changes
+            backwards(360);
             startShooting();
             while(ballsHeld > 0)
             {

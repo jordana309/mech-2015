@@ -580,7 +580,7 @@ int main()
                 }
                 releaseBall();
                 ballsHeld -= 1;
-                delay(16000, 1);
+                delay(8000, 1);
                 IRBeacon1 = checkLIR5();
             }
             stopShooting();

@@ -18,8 +18,9 @@
 -------------------------------------------------------------------------------------------------*/
 void forward(int deg)
 {
-    printText("Go forward");
-    UART1PutChar('\n');
+    #ifdef TESTING
+      printText("Go forward\n");
+    #endif
     
     LATBbits.LATB5 = 0;  // Switch both directions to be forward
     LATBbits.LATB6 = 0;
@@ -43,8 +44,9 @@ void forward(int deg)
 -------------------------------------------------------------------------------------------------*/
 void backwards(int deg)
 {
-    printText("Go backward");
-    UART1PutChar('\n');
+    #ifdef TESTING
+      printText("Go backward\n");
+    #endif
     
     LATBbits.LATB5 = 1;  // Switch both directions to be forward
     LATBbits.LATB6 = 1;
@@ -64,8 +66,9 @@ void backwards(int deg)
 -------------------------------------------------------------------------------------------------*/
 void turnRight(int deg)   //USES MOTOR DEGREES AT THE MOMENT    //green black blue red, black green blue red.  red on b2
 {
-    printText("Turn right");
-    UART1PutChar('\n');
+    #ifdef TESTING
+      printText("Turn right\n");
+    #endif
     
     LATBbits.LATB5 = 1;  // Switch both directions to be forward
     LATBbits.LATB6 = 0;
@@ -85,9 +88,9 @@ void turnRight(int deg)   //USES MOTOR DEGREES AT THE MOMENT    //green black bl
 -------------------------------------------------------------------------------------------------*/
 void turnLeft(int deg)    //USES MOTOR DEGREES AT THE MOMENT
 {
-    printText("Turn left");
-    UART1PutChar('\n');
-    
+    #ifdef TESTING
+      printText("Turn left\n");
+    #endif
     
     LATBbits.LATB6 = 1;
     LATBbits.LATB5 = 0;  // Switch both directions to be forward
@@ -106,15 +109,17 @@ void startDriving()
 
 void stopDriving()
 {
-    printText("Stop driving\n");
-
+    #ifdef TESTING
+      printText("Stop driving\n");
+    #endif
     OC1R = 0;
 }
 
 void forwardUntil()
 {
-    printText("Start Forward\n");
-
+    #ifdef TESTING
+      printText("Start Forward\n");
+    #endif
     LATBbits.LATB5 = 0;  // Switch both directions to be forward
     LATBbits.LATB6 = 0;
 
@@ -123,8 +128,9 @@ void forwardUntil()
 
 void backwardUntil()
 {
-    printText("Start Backward\n");
-
+    #ifdef TESTING
+      printText("Start Backward\n");
+    #endif
     LATBbits.LATB5 = 1;  // Switch both directions to be forward
     LATBbits.LATB6 = 1;
 
@@ -133,8 +139,9 @@ void backwardUntil()
 
 void turnLeftUntil()
 {
-    printText("Start Left\n");
-
+    #ifdef TESTING
+      printText("Start Left\n");
+    #endif
     LATBbits.LATB5 = 0;  // Switch both directions to be forward
     LATBbits.LATB6 = 1;
 
@@ -143,8 +150,9 @@ void turnLeftUntil()
 
 void turnRightUntil()
 {
-    printText("Start Right\n");
-
+    #ifdef TESTING
+      printText("Start Right\n");
+    #endif
     LATBbits.LATB5 = 1;  // Switch both directions to be forward
     LATBbits.LATB6 = 0;
 

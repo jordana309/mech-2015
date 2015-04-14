@@ -12,38 +12,38 @@
 #endif
 
 
-void rodRetract()
-{
-    processingTask = 1;
-    OC2R = 2000;     // Set pulse width to 500 microSec (90 deg right)
-    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
-}
-
-/*-------------------------------------------------------------------------------------------------
- Move rod left - this function flips the beam breaking rod to the left.
- * Called from:
--------------------------------------------------------------------------------------------------*/
-void rodLeft()
-{
-    processingTask = 1;
-    OC2R = 8333;        //Set pulse width to 2083 microsec (60 deg left)
-    //OR 9600 TO GET FULL 90 DEG LEFT FOR BIGGER SWEEP
-    //OC2R = 7700;     // Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
-    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
-}
-
-/*-------------------------------------------------------------------------------------------------
- Move rod right - this function flips the beam breaking rod to the right.
- * Called from:
--------------------------------------------------------------------------------------------------*/
-void rodRight()
-{
-    processingTask = 1;
-    OC2R = 7065;     // Set pulse width to 1766 microSec (30 deg left)
-    //OR 7700 TO GET 45 DEG LEFT FOR BIGGER SWEEP
-   // OC2R = 3900;     // Set pulse width to 975 microSec (45 deg right)
-    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
-}
+//void rodRetract()
+//{
+//    processingTask = 1;
+//    OC2R = 2000;     // Set pulse width to 500 microSec (90 deg right)
+//    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
+//}
+//
+///*-------------------------------------------------------------------------------------------------
+// Move rod left - this function flips the beam breaking rod to the left.
+// * Called from:
+//-------------------------------------------------------------------------------------------------*/
+//void rodLeft()
+//{
+//    processingTask = 1;
+//    OC2R = 8333;        //Set pulse width to 2083 microsec (60 deg left)
+//    //OR 9600 TO GET FULL 90 DEG LEFT FOR BIGGER SWEEP
+//    //OC2R = 7700;     // Set pulse width to 1950 microSec (45 deg left) //MAY HAVE CHANGED BY x4
+//    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
+//}
+//
+///*-------------------------------------------------------------------------------------------------
+// Move rod right - this function flips the beam breaking rod to the right.
+// * Called from:
+//-------------------------------------------------------------------------------------------------*/
+//void rodRight()
+//{
+//    processingTask = 1;
+//    OC2R = 7065;     // Set pulse width to 1766 microSec (30 deg left)
+//    //OR 7700 TO GET 45 DEG LEFT FOR BIGGER SWEEP
+//   // OC2R = 3900;     // Set pulse width to 975 microSec (45 deg right)
+//    delay(10000, 1); // Wait for 0.625 seconds, halting the rest of the program
+//}
 
 /*-------------------------------------------------------------------------------------------------
  Start Shooting - this function opens the MOSFET, allowing current to our high-speed motors to

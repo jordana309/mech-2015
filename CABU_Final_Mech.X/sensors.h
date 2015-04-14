@@ -33,8 +33,7 @@ int isLimitSwitchLPressed()
         return 1;
         // Echo value to bluetooth
         #ifdef TESTING
-          printText('LLim On');
-          ('\n');
+          printText('LLim On\n');
         #endif
     } else              // 1 = open
         return 0;
@@ -48,15 +47,14 @@ int isLimitSwitchLPressed()
 -------------------------------------------------------------------------------------------------*/
 int isLimitSwitchRPressed()
 {
-    int read = _RB10;
+    int read = _RB2;
 
     if(read == 0)       // 0 = pressed
     {
         return 1;
         // Echo value to bluetooth
         #ifdef TESTING
-          printText('RLim On');
-          ('\n');
+          printText('RLim On\n');
         #endif
     } else              // 1 = open
         return 0;

@@ -32,7 +32,8 @@ void PinConf()
     TRISBbits.TRISB7 = 1;   // Set Pin 16 to input (CN23) for UltraSonicL
     TRISBbits.TRISB8 = 1;   // Set Pin 17 to input (CN22) for UltraSonicR
     TRISAbits.TRISA0 = 1;   // Set Pin  2 to input (RA0)  for LimitSwitchL
-    TRISBbits.TRISB10 = 1;  // Set Pin 21 to input (RB10) for LimitSwitchR
+    TRISBbits.TRISB2 = 1;   // Set Pin 6 to input (RB2) for LimitSwitchR
+    //TRISBbits.TRISB10 = 1;  // Set Pin 21 to input (RB10) for LimitSwitchR
 
     ANSBbits.ANSB13 = 1;
     ANSBbits.ANSB14 = 1;
@@ -122,7 +123,7 @@ void PWMConf()
     T2CONbits.TCKPS = 0; // Don't prescale100
     TMR2 = 0;            // Timer set to 0
     T2CONbits.TON = 1;   // Timer is on
-    PR2 =  5999;         // Timer period
+    PR2 =  5999;         // Timer period, runs at 800 Hz, previously at 6000
 
     /* ---- Configure OC2 (Pin 7--RP3)to move servo to break IR beam for ball collection ---- */
 
